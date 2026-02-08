@@ -1,0 +1,305 @@
+/**
+ * App Component Styles
+ * 
+ * Layout Architecture:
+ * - Flexbox-based responsive layout
+ * - Fixed header/footer with flexible content
+ * - Platform-specific window chrome
+ * - Consistent spacing rhythm
+ * 
+ * @module renderer/App.css
+ */
+
+/**
+ * Root Application Container
+ * 
+ * Full viewport height with flex column layout
+ * Ensures footer stays at bottom regardless of content
+ */
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  background: var(--color-surface-base);
+}
+
+/**
+ * Application Header
+ * 
+ * Contains window chrome and address bar
+ * Fixed height for consistent layout
+ */
+.app-header {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  background: var(--color-surface-elevated);
+  border-bottom: 1px solid var(--color-border-base);
+}
+
+/**
+ * Application Content Area
+ * 
+ * Flexible growth to fill available space
+ * Scrollable content with custom scrollbar
+ */
+.app-content {
+  flex: 1;
+  overflow: auto;
+  background: var(--color-surface-base);
+}
+
+/**
+ * Application Footer
+ * 
+ * Status bar with system indicators
+ */
+.app-footer {
+  flex-shrink: 0;
+  background: var(--color-surface-elevated);
+  border-top: 1px solid var(--color-border-base);
+}
+
+/**
+ * Window Chrome - Platform-Specific Controls
+ * 
+ * Provides window management buttons
+ * Includes drag region for frameless windows
+ */
+.window-chrome {
+  display: flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 var(--spacing-lg);
+  -webkit-app-region: drag; /* Enable window dragging */
+  background: var(--color-surface-elevated);
+}
+
+/**
+ * macOS Traffic Lights
+ * 
+ * Standard macOS window controls (red, yellow, green)
+ * Positioned left-aligned as per macOS conventions
+ */
+.traffic-lights {
+  display: flex;
+  gap: var(--spacing-sm);
+  -webkit-app-region: no-drag; /* Disable drag on buttons */
+}
+
+.traffic-light {
+  width: 12px;
+  height: 12px;
+  border-radius: var(--radius-full);
+  border: none;
+  cursor: pointer;
+  transition: opacity var(--transition-fast);
+}
+
+.traffic-light:hover {
+  opacity: 0.8;
+}
+
+.traffic-light.close {
+  background-color: #ff5f57;
+}
+
+.traffic-light.minimize {
+  background-color: #ffbd2e;
+}
+
+.traffic-light.maximize {
+  background-color: #28c840;
+}
+
+/**
+ * Windows/Linux Window Controls
+ * 
+ * Right-aligned controls with larger hit targets
+ * Icons rendered as text for simplicity
+ */
+.window-controls {
+  display: flex;
+  margin-left: auto;
+  -webkit-app-region: no-drag;
+}
+
+.window-control {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 40px;
+  font-size: 16px;
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.window-control:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--color-text-primary);
+}
+
+.window-control.close:hover {
+  background: #e81123;
+  color: white;
+}
+
+/**
+ * Welcome Screen
+ * 
+ * Placeholder content displayed before first navigation
+ * Validates UI rendering and IPC connectivity
+ */
+.welcome-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: var(--spacing-4xl);
+}
+
+.welcome-content {
+  text-align: center;
+  max-width: 600px;
+}
+
+.welcome-title {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-md);
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.welcome-subtitle {
+  font-size: var(--font-size-lg);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--spacing-3xl);
+  line-height: var(--line-height-relaxed);
+}
+
+/**
+ * Welcome Statistics
+ * 
+ * System status indicators in grid layout
+ * Validates architecture layers are operational
+ */
+.welcome-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--spacing-xl);
+  margin-bottom: var(--spacing-3xl);
+  padding: var(--spacing-2xl);
+  background: var(--color-surface-elevated);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border-base);
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.stat-value {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-success-base);
+}
+
+.stat-label {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.welcome-hint {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+  font-style: italic;
+}
+
+/**
+ * Status Bar
+ * 
+ * System status indicators at bottom of window
+ * Real-time state visualization
+ */
+.status-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xl);
+  height: 32px;
+  padding: 0 var(--spacing-lg);
+  font-size: var(--font-size-xs);
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+.status-dot.vault-locked {
+  background-color: var(--color-warning-base);
+  box-shadow: 0 0 8px var(--color-warning-base);
+}
+
+.status-dot.vault-unlocked {
+  background-color: var(--color-success-base);
+  box-shadow: 0 0 8px var(--color-success-base);
+}
+
+.status-dot.vault-loading {
+  background-color: var(--color-info-base);
+  animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.status-dot.connected {
+  background-color: var(--color-success-base);
+  box-shadow: 0 0 8px var(--color-success-base);
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.status-text {
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+/**
+ * Responsive Adjustments
+ * 
+ * Adapt layout for smaller viewports
+ */
+@media (max-width: 768px) {
+  .welcome-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

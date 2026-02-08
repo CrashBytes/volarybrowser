@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "concurrently \"npm:dev:*\"",
     "dev:main": "webpack --config build/config/webpack.main.config.js --mode development --watch",
+    "dev:preload": "webpack --config build/config/webpack.preload.config.js --mode development --watch",
     "dev:renderer": "webpack serve --config build/config/webpack.renderer.config.js --mode development",
     "build": "npm run build:native && npm run build:ts",
     "build:native": "cargo build --release --manifest-path=core/security/native/Cargo.toml",
@@ -56,42 +57,50 @@
   "dependencies": {
     "@noble/ciphers": "^0.5.0",
     "@noble/hashes": "^1.4.0",
-    "hash-wasm": "^4.11.0",
+    "@tanstack/react-query": "^5.17.0",
     "electron": "^28.0.0",
+    "hash-wasm": "^4.11.0",
+    "immer": "^10.0.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "zustand": "^4.5.0",
-    "immer": "^10.0.3",
     "zod": "^3.22.4",
-    "@tanstack/react-query": "^5.17.0"
+    "zustand": "^4.5.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.40.1",
+    "@types/jest": "^29.5.11",
     "@types/node": "^20.10.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "@typescript-eslint/eslint-plugin": "^6.15.0",
     "@typescript-eslint/parser": "^6.15.0",
-    "typescript": "^5.3.3",
-    "webpack": "^5.89.0",
-    "webpack-cli": "^5.1.4",
-    "webpack-dev-server": "^4.15.1",
-    "webpack-bundle-analyzer": "^4.10.1",
-    "ts-loader": "^9.5.1",
-    "ts-node": "^10.9.2",
-    "jest": "^29.7.0",
-    "@types/jest": "^29.5.11",
-    "ts-jest": "^29.1.1",
-    "@playwright/test": "^1.40.1",
+    "concurrently": "^8.2.2",
+    "css-loader": "^7.1.2",
+    "electron-builder": "^24.9.1",
     "eslint": "^8.56.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-react": "^7.33.2",
     "eslint-plugin-react-hooks": "^4.6.0",
+    "html-webpack-plugin": "^5.6.4",
+    "jest": "^29.7.0",
+    "postcss-loader": "^8.2.0",
     "prettier": "^3.1.1",
-    "concurrently": "^8.2.2",
+    "process": "^0.11.10",
     "rimraf": "^5.0.5",
-    "electron-builder": "^24.9.1",
+    "snyk": "^1.1272.0",
+    "style-loader": "^4.0.0",
+    "terser-webpack-plugin": "^5.3.14",
+    "ts-jest": "^29.1.1",
+    "ts-loader": "^9.5.1",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths-webpack-plugin": "^4.2.0",
     "typedoc": "^0.25.4",
-    "snyk": "^1.1272.0"
+    "typescript": "^5.3.3",
+    "webpack": "^5.89.0",
+    "webpack-bundle-analyzer": "^4.10.1",
+    "webpack-cli": "^5.1.4",
+    "webpack-dev-server": "^4.15.1",
+    "webpack-merge": "^6.0.1"
   },
   "optionalDependencies": {
     "@napi-rs/argon2": "^1.6.0"
@@ -110,18 +119,30 @@
     ],
     "mac": {
       "category": "public.app-category.productivity",
-      "target": ["dmg", "zip"],
+      "target": [
+        "dmg",
+        "zip"
+      ],
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist"
     },
     "win": {
-      "target": ["nsis", "portable"],
-      "signingHashAlgorithms": ["sha256"]
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "signingHashAlgorithms": [
+        "sha256"
+      ]
     },
     "linux": {
-      "target": ["AppImage", "deb", "rpm"],
+      "target": [
+        "AppImage",
+        "deb",
+        "rpm"
+      ],
       "category": "Network",
       "maintainer": "security@volarybrowser.com"
     }
@@ -129,8 +150,13 @@
   "jest": {
     "preset": "ts-jest",
     "testEnvironment": "node",
-    "roots": ["<rootDir>/tests"],
-    "testMatch": ["**/*.test.ts", "**/*.spec.ts"],
+    "roots": [
+      "<rootDir>/tests"
+    ],
+    "testMatch": [
+      "**/*.test.ts",
+      "**/*.spec.ts"
+    ],
     "collectCoverageFrom": [
       "core/**/*.ts",
       "src/**/*.ts",

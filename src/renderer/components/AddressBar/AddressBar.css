@@ -1,0 +1,129 @@
+.address-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs, 4px);
+  height: 40px;
+  padding: 0 var(--spacing-sm, 8px);
+  background-color: var(--color-bg-base, #1a1a1a);
+  border-bottom: 1px solid var(--color-border, #333);
+  position: relative;
+  -webkit-app-region: no-drag;
+}
+
+.address-bar__nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.address-bar__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm, 4px);
+  background: transparent;
+  color: var(--color-text-secondary, #999);
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color var(--transition-fast, 150ms) ease,
+              color var(--transition-fast, 150ms) ease;
+}
+
+.address-bar__btn:hover:not(:disabled) {
+  background-color: var(--color-bg-elevated, #2d2d2d);
+  color: var(--color-text-primary, #e0e0e0);
+}
+
+.address-bar__btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.address-bar__url-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 var(--spacing-sm, 8px);
+  background-color: var(--color-bg-elevated, #2d2d2d);
+  border: 1px solid var(--color-border, #333);
+  border-radius: var(--radius-md, 6px);
+  transition: border-color var(--transition-fast, 150ms) ease;
+}
+
+.address-bar__url-container:focus-within {
+  border-color: var(--color-primary-base, #6366f1);
+}
+
+.address-bar__security {
+  flex-shrink: 0;
+  margin-right: var(--spacing-xs, 4px);
+  font-size: 12px;
+  line-height: 1;
+}
+
+.address-bar__security--secure {
+  opacity: 0.7;
+}
+
+.address-bar__security--insecure {
+  opacity: 0.5;
+}
+
+.address-bar__input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-text-primary, #e0e0e0);
+  font-family: inherit;
+  font-size: var(--font-size-sm, 12px);
+  outline: none;
+}
+
+.address-bar__input::placeholder {
+  color: var(--color-text-muted, #666);
+}
+
+.address-bar__input::selection {
+  background-color: var(--color-primary-base, #6366f1);
+  color: white;
+}
+
+.address-bar__progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  background-color: var(--color-primary-base, #6366f1);
+  animation: progress-indeterminate 1.5s ease-in-out infinite;
+}
+
+@keyframes progress-indeterminate {
+  0% {
+    left: 0;
+    width: 0%;
+  }
+  50% {
+    left: 25%;
+    width: 50%;
+  }
+  100% {
+    left: 100%;
+    width: 0%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .address-bar__progress {
+    animation: none;
+    width: 100%;
+    opacity: 0.5;
+  }
+}

@@ -1,0 +1,355 @@
+/**
+ * Global Styles - Volary Browser Design System
+ * 
+ * Design Philosophy:
+ * - Dark-first interface (reduces eye strain, modern aesthetic)
+ * - Systematic spacing scale (4px base unit, powers of 2)
+ * - Semantic color palette (intent-based, not arbitrary)
+ * - Typography hierarchy (clear information architecture)
+ * 
+ * Performance Considerations:
+ * - CSS variables for runtime theme switching (no recompilation)
+ * - System font stack (zero network requests, instant rendering)
+ * - Minimal specificity (prevents cascade conflicts)
+ * 
+ * @module styles/global
+ */
+
+:root {
+  /**
+   * Color System - Semantic Intent-Based Palette
+   * 
+   * Naming Convention: {category}-{variant}
+   * Categories: primary, secondary, success, danger, warning, info
+   * Variants: base, hover, active, muted
+   */
+  
+  /* Primary Brand Colors */
+  --color-primary-base: #6366f1;
+  --color-primary-hover: #4f46e5;
+  --color-primary-active: #4338ca;
+  --color-primary-muted: rgba(99, 102, 241, 0.1);
+
+  /* Surface Colors (backgrounds, cards, panels) */
+  --color-surface-base: #1a1a1a;
+  --color-surface-elevated: #2d2d2d;
+  --color-surface-overlay: #3a3a3a;
+  
+  /* Text Colors (hierarchy through opacity) */
+  --color-text-primary: #e0e0e0;
+  --color-text-secondary: #a0a0a0;
+  --color-text-tertiary: #6b6b6b;
+  --color-text-inverse: #1a1a1a;
+
+  /* Semantic Status Colors */
+  --color-success-base: #10b981;
+  --color-success-muted: rgba(16, 185, 129, 0.1);
+  
+  --color-danger-base: #ef4444;
+  --color-danger-muted: rgba(239, 68, 68, 0.1);
+  
+  --color-warning-base: #f59e0b;
+  --color-warning-muted: rgba(245, 158, 11, 0.1);
+  
+  --color-info-base: #3b82f6;
+  --color-info-muted: rgba(59, 130, 246, 0.1);
+
+  /* Border Colors */
+  --color-border-base: rgba(255, 255, 255, 0.1);
+  --color-border-focus: var(--color-primary-base);
+
+  /**
+   * Spacing Scale - Systematic Rhythm
+   * 
+   * Base unit: 4px (divisible by common screen densities)
+   * Scale: 4, 8, 12, 16, 24, 32, 48, 64, 96
+   */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 24px;
+  --spacing-2xl: 32px;
+  --spacing-3xl: 48px;
+  --spacing-4xl: 64px;
+
+  /**
+   * Typography Scale - Modular Scale (1.25 ratio)
+   * 
+   * Ensures harmonious type relationships
+   * Base: 14px (optimal for UI density)
+   */
+  --font-size-xs: 11px;
+  --font-size-sm: 12px;
+  --font-size-base: 14px;
+  --font-size-lg: 16px;
+  --font-size-xl: 18px;
+  --font-size-2xl: 24px;
+  --font-size-3xl: 32px;
+
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  --line-height-tight: 1.25;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.75;
+
+  /**
+   * Border Radius - Consistent Rounding
+   */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-full: 9999px;
+
+  /**
+   * Shadows - Elevation System
+   * 
+   * Creates depth hierarchy through layered shadows
+   */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+
+  /**
+   * Transitions - Consistent Animation Timing
+   * 
+   * Standard: 150ms (feels immediate but smooth)
+   * Complex: 300ms (allows perception of motion)
+   * Easing: cubic-bezier (natural acceleration/deceleration)
+   */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /**
+   * Z-Index Scale - Layering Hierarchy
+   * 
+   * Prevents z-index wars with systematic scale
+   */
+  --z-index-base: 0;
+  --z-index-dropdown: 1000;
+  --z-index-sticky: 1100;
+  --z-index-modal: 1200;
+  --z-index-popover: 1300;
+  --z-index-tooltip: 1400;
+}
+
+/**
+ * Reset - Normalize Browser Inconsistencies
+ * 
+ * Philosophy: Zero opinionated styles, only normalization
+ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/**
+ * Base Typography
+ * 
+ * System font stack priorities:
+ * 1. -apple-system, BlinkMacSystemFont: macOS/iOS native fonts
+ * 2. Segoe UI: Windows native
+ * 3. Roboto: Android native
+ * 4. Fallbacks for other platforms
+ */
+html {
+  font-size: 16px; /* Base for rem units */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 
+               'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 
+               'Helvetica Neue', sans-serif;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-primary);
+  background-color: var(--color-surface-base);
+  
+  /* Prevent text selection during window drag (frameless) */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/**
+ * Allow text selection in content areas
+ */
+input,
+textarea,
+[contenteditable] {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/**
+ * Code Typography
+ * 
+ * Monospace stack for code blocks, terminal output
+ */
+code,
+pre,
+kbd,
+samp {
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', 
+               Consolas, 'Courier New', monospace;
+  font-size: 0.9em;
+}
+
+/**
+ * Interactive Element Defaults
+ */
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/**
+ * Focus Styles - Accessibility
+ * 
+ * Visible focus indicators for keyboard navigation
+ * Removed on mouse click (via JS) to prevent visual clutter
+ */
+:focus-visible {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 2px;
+}
+
+/**
+ * Links - Semantic Intent
+ */
+a {
+  color: var(--color-primary-base);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+a:hover {
+  color: var(--color-primary-hover);
+}
+
+/**
+ * Scrollbar Styling - Dark Theme
+ * 
+ * WebKit only (Chrome, Safari, new Edge)
+ * Graceful degradation on Firefox/other browsers
+ */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-surface-base);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-surface-overlay);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/**
+ * Selection Highlight
+ */
+::selection {
+  background-color: var(--color-primary-muted);
+  color: var(--color-text-primary);
+}
+
+/**
+ * Utility Classes - Composition Over Inheritance
+ * 
+ * Single-purpose classes for common patterns
+ */
+.flex {
+  display: flex;
+}
+
+.flex-col {
+  flex-direction: column;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.justify-center {
+  justify-content: center;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+.gap-sm {
+  gap: var(--spacing-sm);
+}
+
+.gap-md {
+  gap: var(--spacing-md);
+}
+
+.gap-lg {
+  gap: var(--spacing-lg);
+}
+
+/**
+ * Animation Performance
+ * 
+ * Respect user's motion preferences (accessibility)
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/**
+ * Print Styles - Light Theme for Printing
+ */
+@media print {
+  :root {
+    --color-surface-base: #ffffff;
+    --color-text-primary: #000000;
+  }
+  
+  * {
+    box-shadow: none !important;
+  }
+}

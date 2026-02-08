@@ -15,7 +15,7 @@
  * @author Volary Security Team
  */
 
-import { randomBytes, createCipheriv, createDecipheriv, createHmac } from 'crypto';
+import { randomBytes } from 'crypto';
 import { argon2id } from 'hash-wasm';
 import { hkdf } from '@noble/hashes/hkdf';
 import { sha256 } from '@noble/hashes/sha256';
@@ -340,8 +340,8 @@ export class Vault {
     this.ensureUnlocked();
 
     // Derive context-specific key if metadata present
-    const decryptionKey = encrypted.metadata?.context
-      ? await this.getDerivedKey(encrypted.metadata.context)
+    const decryptionKey = encrypted.metadata?.['context']
+      ? await this.getDerivedKey(encrypted.metadata['context'])
       : this.masterKey!;
 
     // Reconstruct ciphertext with auth tag
@@ -444,7 +444,7 @@ export class Vault {
    * @param key - Key to verify
    * @returns True if key is correct
    */
-  private async verifyMasterKey(key: Uint8Array): Promise<boolean> {
+  private async verifyMasterKey(_key: Uint8Array): Promise<boolean> {
     // TODO: Implementation requires stored verification blob
     // For now, assume key is correct (real impl would check HMAC)
     return true;

@@ -114,10 +114,10 @@ const CHROMIUM_VERSION = '120.0.6099.56';
  * Production values will be environment-specific
  */
 const SERVICE_ENDPOINTS = {
-  update: process.env.VOLARY_UPDATE_URL || 'https://updates.volarybrowser.com',
-  telemetry: process.env.VOLARY_TELEMETRY_URL || 'https://telemetry.volarybrowser.com',
-  sync: process.env.VOLARY_SYNC_URL || 'https://sync.volarybrowser.com',
-  extensionStore: process.env.VOLARY_STORE_URL || 'https://extensions.volarybrowser.com',
+  update: process.env['VOLARY_UPDATE_URL'] || 'https://updates.volarybrowser.com',
+  telemetry: process.env['VOLARY_TELEMETRY_URL'] || 'https://telemetry.volarybrowser.com',
+  sync: process.env['VOLARY_SYNC_URL'] || 'https://sync.volarybrowser.com',
+  extensionStore: process.env['VOLARY_STORE_URL'] || 'https://extensions.volarybrowser.com',
 };
 
 /**
