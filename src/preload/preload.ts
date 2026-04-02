@@ -334,6 +334,21 @@ const api = {
   },
 
   /**
+   * Reading Mode API
+   */
+  readingMode: {
+    toggle: async () => ipcRenderer.invoke('reading:toggle'),
+  },
+
+  /**
+   * Dark Mode API
+   */
+  darkMode: {
+    toggle: async () => ipcRenderer.invoke('dark:toggle'),
+    getStatus: async () => ipcRenderer.invoke('dark:status'),
+  },
+
+  /**
    * Extensions API
    */
   extensions: {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { BackIcon, ForwardIcon, ReloadIcon, StopIcon, LockIcon, UnlockIcon } from '../../assets/icons/NavIcons';
+import { BackIcon, ForwardIcon, ReloadIcon, StopIcon, LockIcon, UnlockIcon, ReaderIcon, MoonIcon, SunIcon } from '../../assets/icons/NavIcons';
 import './AddressBar.css';
 
 interface AddressBarProps {
@@ -125,6 +125,25 @@ export const AddressBar: React.FC<AddressBarProps> = ({
           spellCheck={false}
           autoComplete="off"
         />
+      </div>
+
+      <div className="address-bar__tools">
+        <button
+          className="address-bar__btn"
+          onClick={() => window.volary.readingMode.toggle()}
+          title="Reading mode (Cmd+Shift+R)"
+          aria-label="Toggle reading mode"
+        >
+          <ReaderIcon />
+        </button>
+        <button
+          className="address-bar__btn address-bar__btn--dark"
+          onClick={() => window.volary.darkMode.toggle()}
+          title="Force dark mode"
+          aria-label="Toggle dark mode on websites"
+        >
+          <MoonIcon />
+        </button>
       </div>
 
       {isLoading && <div className="address-bar__progress" />}

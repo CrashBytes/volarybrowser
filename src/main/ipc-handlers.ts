@@ -61,6 +61,8 @@ import {
 } from '../../core/storage/repositories/bookmarks';
 import { getSetting, setSetting, getAllSettings } from '../../core/storage/repositories/settings';
 import { ExtensionManager } from './extensions/extension-manager';
+import { ReadingMode } from './reading-mode';
+import { ForceDarkMode } from './privacy/force-dark-mode';
 
 /**
  * IPC Handler function signature
@@ -114,6 +116,8 @@ export class IPCHandlers {
   private historyManager: HistoryManager;
   private downloadManager: DownloadManager;
   private extensionManager: ExtensionManager;
+  private readingMode: ReadingMode;
+  private forceDarkMode: ForceDarkMode;
   private findInPage: FindInPage;
   private handlers: Map<IPCChannel, HandlerRegistration> = new Map();
 
@@ -132,6 +136,8 @@ export class IPCHandlers {
     historyManager: HistoryManager,
     downloadManager: DownloadManager,
     extensionManager: ExtensionManager,
+    readingMode: ReadingMode,
+    forceDarkMode: ForceDarkMode,
   ) {
     this.logger = LoggerFactory.create('IPCHandlers');
     this.windowManager = windowManager;
@@ -140,6 +146,8 @@ export class IPCHandlers {
     this.historyManager = historyManager;
     this.downloadManager = downloadManager;
     this.extensionManager = extensionManager;
+    this.readingMode = readingMode;
+    this.forceDarkMode = forceDarkMode;
     this.findInPage = new FindInPage(tabManager);
   }
 
@@ -178,6 +186,9 @@ export class IPCHandlers {
 
     // Register find-in-page handlers
     this.registerFindHandlers();
+
+    // Register reading mode / dark mode handlers
+    this.registerViewHandlers();
 
     // Register extension handlers
     this.registerExtensionHandlers();
@@ -695,6 +706,28 @@ export class IPCHandlers {
         this.findInPage.stop();
         return { success: true };
       },
+    });
+  }
+
+  // -- Reading Mode & Dark Mode --
+
+  private registerViewHandlers(): void {
+    this.register({
+      channel: IPCChannel.READING_MODE_TOGGLE,
+      handler: async () => this.readingMode.toggle(),
+    });
+
+    this.register({
+      channel: IPCChannel.DARK_MODE_TOGGLE,
+      handler: async () => {
+        const enabled = this.forceDarkMode.toggle();
+        return { enabled };
+      },
+    });
+
+    this.register({
+      channel: IPCChannel.DARK_MODE_STATUS,
+      handler: async () => ({ enabled: this.forceDarkMode.isEnabled() }),
     });
   }
 

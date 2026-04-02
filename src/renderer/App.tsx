@@ -171,6 +171,9 @@ export const App: React.FC = () => {
       } else if (mod && e.key === 'f') {
         e.preventDefault();
         openFind();
+      } else if (mod && e.shiftKey && e.key === 'R') {
+        e.preventDefault();
+        window.volary.readingMode.toggle();
       }
     };
 

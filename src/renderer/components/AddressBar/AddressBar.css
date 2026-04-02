@@ -105,6 +105,12 @@
   color: white;
 }
 
+.address-bar__tools {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
 .address-bar__progress {
   position: absolute;
   bottom: 0;

@@ -164,6 +164,11 @@ export enum IPCChannel {
   FIND_PREVIOUS = 'find:previous',
   FIND_STOP = 'find:stop',
 
+  // Reading mode & dark mode
+  READING_MODE_TOGGLE = 'reading:toggle',
+  DARK_MODE_TOGGLE = 'dark:toggle',
+  DARK_MODE_STATUS = 'dark:status',
+
   // Extensions
   EXTENSION_GET_ALL = 'extension:get-all',
   EXTENSION_TOGGLE = 'extension:toggle',

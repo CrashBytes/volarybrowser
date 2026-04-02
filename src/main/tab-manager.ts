@@ -20,6 +20,7 @@ import { LoggerFactory } from './utils/logger';
 import { validateAndNormalizeUrl } from './utils/url-validator';
 import { attachContextMenu } from './context-menu';
 import type { ContentScriptInjector } from './extensions/content-script-injector';
+import type { ForceDarkMode } from './privacy/force-dark-mode';
 
 interface ManagedTab {
   view: BrowserView;
@@ -33,6 +34,7 @@ export class TabManager {
   private window: BrowserWindow | null = null;
   private viewBounds: Electron.Rectangle = { x: 0, y: 88, width: 1280, height: 680 };
   private contentScriptInjector: ContentScriptInjector | null = null;
+  private forceDarkMode: ForceDarkMode | null = null;
   private onNavigateCallback: ((url: string, title: string) => void) | null = null;
 
   constructor() {
@@ -44,6 +46,10 @@ export class TabManager {
    */
   onNavigate(callback: (url: string, title: string) => void): void {
     this.onNavigateCallback = callback;
+  }
+
+  setForceDarkMode(darkMode: ForceDarkMode): void {
+    this.forceDarkMode = darkMode;
   }
 
   /**
@@ -303,6 +309,11 @@ export class TabManager {
       if (this.onNavigateCallback) {
         const title = wc.getTitle() || '';
         this.onNavigateCallback(url, title);
+      }
+
+      // Inject force dark mode CSS
+      if (this.forceDarkMode?.isEnabled()) {
+        wc.insertCSS(this.forceDarkMode.getCSS()).catch(() => {});
       }
 
       // Inject content scripts for matching extensions

@@ -37,6 +37,8 @@ import { DownloadManager } from './download-manager';
 import { NetworkFilter } from './privacy/network-filter';
 import { PermissionHandler } from './permission-dialog';
 import { CrashRecovery } from './crash-recovery';
+import { ReadingMode } from './reading-mode';
+import { ForceDarkMode } from './privacy/force-dark-mode';
 
 /**
  * Application Controller
@@ -59,6 +61,8 @@ class VolaryBrowser {
   private networkFilter: NetworkFilter;
   private permissionHandler: PermissionHandler;
   private crashRecovery: CrashRecovery;
+  private readingMode: ReadingMode;
+  private forceDarkMode: ForceDarkMode;
   private ipcHandlers: IPCHandlers;
   private lifecycleState: AppLifecycleState = AppLifecycleState.INITIALIZING;
 
@@ -102,9 +106,12 @@ class VolaryBrowser {
     this.networkFilter = new NetworkFilter();
     this.permissionHandler = new PermissionHandler();
     this.crashRecovery = new CrashRecovery();
+    this.readingMode = new ReadingMode(this.tabManager);
+    this.forceDarkMode = new ForceDarkMode();
     this.ipcHandlers = new IPCHandlers(
       this.windowManager, this.vaultManager, this.tabManager,
-      this.historyManager, this.downloadManager, this.extensionManager
+      this.historyManager, this.downloadManager, this.extensionManager,
+      this.readingMode, this.forceDarkMode
     );
 
     // Configure application behavior
@@ -260,6 +267,8 @@ class VolaryBrowser {
       // Initialize privacy/security systems
       this.networkFilter.initialize();
       this.permissionHandler.initialize();
+      this.forceDarkMode.initialize();
+      this.tabManager.setForceDarkMode(this.forceDarkMode);
       this.logger.debug('Privacy systems initialized');
 
       // Configure security policies (CSP for our UI)
