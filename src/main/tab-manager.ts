@@ -261,6 +261,39 @@ export class TabManager {
     }
   }
 
+  // -- Zoom --
+
+  zoomIn(): number {
+    const tab = this.getActiveTab();
+    if (!tab) return 1;
+    const current = tab.view.webContents.getZoomFactor();
+    const next = Math.min(current + 0.1, 3);
+    tab.view.webContents.setZoomFactor(next);
+    return next;
+  }
+
+  zoomOut(): number {
+    const tab = this.getActiveTab();
+    if (!tab) return 1;
+    const current = tab.view.webContents.getZoomFactor();
+    const next = Math.max(current - 0.1, 0.3);
+    tab.view.webContents.setZoomFactor(next);
+    return next;
+  }
+
+  zoomReset(): number {
+    const tab = this.getActiveTab();
+    if (!tab) return 1;
+    tab.view.webContents.setZoomFactor(1);
+    return 1;
+  }
+
+  getZoom(): number {
+    const tab = this.getActiveTab();
+    if (!tab) return 1;
+    return tab.view.webContents.getZoomFactor();
+  }
+
   // -- State queries --
 
   getAllTabStates(): TabState[] {

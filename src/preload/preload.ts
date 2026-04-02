@@ -334,6 +334,16 @@ const api = {
   },
 
   /**
+   * Zoom API
+   */
+  zoom: {
+    in: async () => ipcRenderer.invoke('zoom:in'),
+    out: async () => ipcRenderer.invoke('zoom:out'),
+    reset: async () => ipcRenderer.invoke('zoom:reset'),
+    get: async () => ipcRenderer.invoke('zoom:get'),
+  },
+
+  /**
    * Reading Mode API
    */
   readingMode: {

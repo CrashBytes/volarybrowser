@@ -169,6 +169,12 @@ export enum IPCChannel {
   DARK_MODE_TOGGLE = 'dark:toggle',
   DARK_MODE_STATUS = 'dark:status',
 
+  // Zoom
+  ZOOM_IN = 'zoom:in',
+  ZOOM_OUT = 'zoom:out',
+  ZOOM_RESET = 'zoom:reset',
+  ZOOM_GET = 'zoom:get',
+
   COLORBLIND_CYCLE = 'colorblind:cycle',
   COLORBLIND_SET = 'colorblind:set',
   COLORBLIND_STATUS = 'colorblind:status',

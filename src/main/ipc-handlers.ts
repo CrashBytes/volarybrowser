@@ -191,6 +191,9 @@ export class IPCHandlers {
     // Register find-in-page handlers
     this.registerFindHandlers();
 
+    // Register zoom handlers
+    this.registerZoomHandlers();
+
     // Register reading mode / dark mode handlers
     this.registerViewHandlers();
 
@@ -710,6 +713,27 @@ export class IPCHandlers {
         this.findInPage.stop();
         return { success: true };
       },
+    });
+  }
+
+  // -- Zoom --
+
+  private registerZoomHandlers(): void {
+    this.register({
+      channel: IPCChannel.ZOOM_IN,
+      handler: async () => ({ zoom: this.tabManager.zoomIn() }),
+    });
+    this.register({
+      channel: IPCChannel.ZOOM_OUT,
+      handler: async () => ({ zoom: this.tabManager.zoomOut() }),
+    });
+    this.register({
+      channel: IPCChannel.ZOOM_RESET,
+      handler: async () => ({ zoom: this.tabManager.zoomReset() }),
+    });
+    this.register({
+      channel: IPCChannel.ZOOM_GET,
+      handler: async () => ({ zoom: this.tabManager.getZoom() }),
     });
   }
 

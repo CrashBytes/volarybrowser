@@ -177,6 +177,15 @@ export const App: React.FC = () => {
       } else if (mod && e.shiftKey && e.key === 'R') {
         e.preventDefault();
         window.volary.readingMode.toggle();
+      } else if (mod && (e.key === '=' || e.key === '+')) {
+        e.preventDefault();
+        window.volary.zoom.in();
+      } else if (mod && e.key === '-') {
+        e.preventDefault();
+        window.volary.zoom.out();
+      } else if (mod && e.key === '0') {
+        e.preventDefault();
+        window.volary.zoom.reset();
       }
     };
 
