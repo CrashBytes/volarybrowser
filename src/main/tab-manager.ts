@@ -334,6 +334,36 @@ export class TabManager {
     return this.tabs.get(this.activeTabId);
   }
 
+  /**
+   * Suspend all tab views (e.g. when system sleeps or screen locks).
+   * Sets BrowserView bounds to zero so they release rendering resources
+   * and pauses background throttling on each webContents.
+   */
+  suspendAllViews(): void {
+    this.logger.info('Suspending all tab views');
+    for (const [, tab] of this.tabs) {
+      if (!tab.view.webContents.isDestroyed()) {
+        tab.view.setBounds({ x: 0, y: 0, width: 0, height: 0 });
+        tab.view.webContents.setBackgroundThrottling(true);
+        tab.view.webContents.setFrameRate(1);
+      }
+    }
+  }
+
+  /**
+   * Resume all tab views (e.g. when system wakes or screen unlocks).
+   * Restores the active tab's bounds and resets frame rates.
+   */
+  resumeAllViews(): void {
+    this.logger.info('Resuming all tab views');
+    for (const [, tab] of this.tabs) {
+      if (!tab.view.webContents.isDestroyed()) {
+        tab.view.webContents.setFrameRate(60);
+      }
+    }
+    this.repositionActiveView();
+  }
+
   // -- Cleanup --
 
   destroy(): void {

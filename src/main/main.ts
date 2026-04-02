@@ -21,7 +21,7 @@
  * @module main
  */
 
-import { app, BrowserWindow, session } from 'electron';
+import { app, BrowserWindow, powerMonitor, session } from 'electron';
 import * as path from 'path';
 import { config } from './config';
 import { WindowManager } from './window-manager';
@@ -230,6 +230,29 @@ class VolaryBrowser {
       // Save tab state so it can be restored after restart
       const tabs = this.tabManager.getAllTabStates();
       this.crashRecovery.saveTabs(tabs);
+    });
+
+    // System suspend / screen lock — suspend tab rendering so the app
+    // releases GPU and compositor resources and macOS can background it cleanly.
+    powerMonitor.on('suspend', () => {
+      this.logger.info('System suspending — suspending tab views');
+      this.tabManager.suspendAllViews();
+    });
+
+    powerMonitor.on('lock-screen', () => {
+      this.logger.info('Screen locked — suspending tab views');
+      this.tabManager.suspendAllViews();
+    });
+
+    // System resume / screen unlock — restore tab rendering.
+    powerMonitor.on('resume', () => {
+      this.logger.info('System resumed — resuming tab views');
+      this.tabManager.resumeAllViews();
+    });
+
+    powerMonitor.on('unlock-screen', () => {
+      this.logger.info('Screen unlocked — resuming tab views');
+      this.tabManager.resumeAllViews();
     });
 
     // Child process crash - log for diagnostics
