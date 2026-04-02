@@ -8,6 +8,7 @@ interface TabBarProps {
   onTabSwitch: (tabId: string) => void;
   onTabClose: (tabId: string) => void;
   onNewTab: () => void;
+  onContextMenuChange?: (open: boolean) => void;
 }
 
 interface ContextMenu {
@@ -23,6 +24,7 @@ export const TabBar: React.FC<TabBarProps> = ({
   onTabSwitch,
   onTabClose,
   onNewTab,
+  onContextMenuChange,
 }) => {
   const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
 
@@ -36,9 +38,13 @@ export const TabBar: React.FC<TabBarProps> = ({
   const handleContextMenu = (e: React.MouseEvent, tabId: string, tabIndex: number) => {
     e.preventDefault();
     setContextMenu({ x: e.clientX, y: e.clientY, tabId, tabIndex });
+    onContextMenuChange?.(true);
   };
 
-  const closeContextMenu = () => setContextMenu(null);
+  const closeContextMenu = () => {
+    setContextMenu(null);
+    onContextMenuChange?.(false);
+  };
 
   const closeTab = (tabId: string) => {
     onTabClose(tabId);
@@ -142,7 +148,10 @@ export const TabBar: React.FC<TabBarProps> = ({
           <div className="tab-context-overlay" onClick={closeContextMenu} />
           <div
             className="tab-context-menu"
-            style={{ left: contextMenu.x, top: contextMenu.y }}
+            style={{
+              left: Math.min(contextMenu.x, window.innerWidth - 240),
+              top: contextMenu.y + 4,
+            }}
           >
             <button className="tab-context-item" onClick={duplicateTab}>
               Duplicate Tab

@@ -40,6 +40,7 @@ export const App: React.FC = () => {
   } = useBrowserStore();
 
   const [isMaximized, setIsMaximized] = React.useState(false);
+  const [tabContextMenuOpen, setTabContextMenuOpen] = React.useState(false);
 
   // Layout refs for bounds calculation
   const headerRef = useRef<HTMLElement>(null);
@@ -53,6 +54,7 @@ export const App: React.FC = () => {
     (vaultStatus.isLoading || !vaultStatus.hasVault || !vaultStatus.isUnlocked);
   const isModalOpen = vaultModalVisible
     || showBlockedPanel
+    || tabContextMenuOpen
     || (activeTab != null && !activeTab.url);
 
   /**
@@ -295,6 +297,7 @@ export const App: React.FC = () => {
           activeTabId={activeTabId}
           onTabSwitch={(id) => window.volary.tabs.switch(id)}
           onTabClose={(id) => window.volary.tabs.close(id)}
+          onContextMenuChange={setTabContextMenuOpen}
           onNewTab={() => {
             window.volary.tabs.create().then(() => {
               setTimeout(() => {
