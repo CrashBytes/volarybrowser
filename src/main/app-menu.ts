@@ -267,6 +267,14 @@ export class AppMenu {
           },
           { type: 'separator' },
           {
+            label: 'Saved Media (Vault)',
+            click: () => {
+              const mediaDir = require('path').join(app.getPath('userData'), 'vault', 'media');
+              shell.openPath(mediaDir);
+            },
+          },
+          { type: 'separator' },
+          {
             label: 'Clear Browsing Data...',
             click: () => send('open-settings', 'privacy'),
           },

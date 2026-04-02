@@ -6,8 +6,57 @@
  * @module context-menu
  */
 
-import { Menu, MenuItem, BrowserView, clipboard, shell } from 'electron';
+import { Menu, MenuItem, BrowserView, clipboard, shell, dialog, app, net } from 'electron';
+import { promises as fs } from 'fs';
+import path from 'path';
 import { TabManager } from './tab-manager';
+import { LoggerFactory } from './utils/logger';
+
+const logger = LoggerFactory.create('ContextMenu');
+
+/** Directory where vault media is saved */
+function getVaultMediaDir(): string {
+  return path.join(app.getPath('userData'), 'vault', 'media');
+}
+
+/**
+ * Download a URL and save it to the vault media directory
+ */
+async function saveMediaToVault(url: string, type: 'image' | 'video'): Promise<string | null> {
+  try {
+    const mediaDir = getVaultMediaDir();
+    await fs.mkdir(mediaDir, { recursive: true });
+
+    // Extract filename from URL
+    const urlObj = new URL(url);
+    let filename = path.basename(urlObj.pathname) || `${type}-${Date.now()}`;
+
+    // Ensure it has an extension
+    if (!path.extname(filename)) {
+      filename += type === 'image' ? '.png' : '.mp4';
+    }
+
+    // Make filename unique
+    const timestamp = Date.now();
+    const ext = path.extname(filename);
+    const base = path.basename(filename, ext);
+    const saveName = `${base}-${timestamp}${ext}`;
+    const savePath = path.join(mediaDir, saveName);
+
+    // Download the file
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const buffer = Buffer.from(await response.arrayBuffer());
+
+    await fs.writeFile(savePath, buffer);
+    logger.info(`${type} saved to vault`, { savePath, size: buffer.length });
+
+    return savePath;
+  } catch (error) {
+    logger.error(`Failed to save ${type} to vault`, error as Error, { url });
+    return null;
+  }
+}
 
 /**
  * Attach a context menu handler to a BrowserView's webContents
@@ -37,6 +86,93 @@ export function attachContextMenu(view: BrowserView, tabManager: TabManager): vo
       }));
       menu.append(new MenuItem({
         label: 'Copy Image Address',
+        click: () => clipboard.writeText(params.srcURL),
+      }));
+      menu.append(new MenuItem({
+        label: 'Save Image to Vault',
+        click: async () => {
+          const saved = await saveMediaToVault(params.srcURL, 'image');
+          if (saved) {
+            dialog.showMessageBox({
+              type: 'info',
+              title: 'Image Saved',
+              message: 'Image saved to vault',
+              detail: path.basename(saved),
+            });
+          } else {
+            dialog.showMessageBox({
+              type: 'error',
+              title: 'Save Failed',
+              message: 'Failed to save image to vault',
+            });
+          }
+        },
+      }));
+      menu.append(new MenuItem({
+        label: 'Save Image As...',
+        click: async () => {
+          const ext = path.extname(new URL(params.srcURL).pathname) || '.png';
+          const result = await dialog.showSaveDialog({
+            defaultPath: `image-${Date.now()}${ext}`,
+            filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'] }],
+          });
+          if (!result.canceled && result.filePath) {
+            try {
+              const response = await fetch(params.srcURL);
+              const buffer = Buffer.from(await response.arrayBuffer());
+              await fs.writeFile(result.filePath, buffer);
+            } catch (error) {
+              logger.error('Failed to save image', error as Error);
+            }
+          }
+        },
+      }));
+      menu.append(new MenuItem({ type: 'separator' }));
+    }
+
+    // Video/media context
+    if (params.mediaType === 'video' || params.mediaType === 'audio') {
+      menu.append(new MenuItem({
+        label: `Save ${params.mediaType === 'video' ? 'Video' : 'Audio'} to Vault`,
+        click: async () => {
+          const type = params.mediaType === 'video' ? 'video' : 'image';
+          const saved = await saveMediaToVault(params.srcURL, type);
+          if (saved) {
+            dialog.showMessageBox({
+              type: 'info',
+              title: `${params.mediaType === 'video' ? 'Video' : 'Audio'} Saved`,
+              message: `${params.mediaType === 'video' ? 'Video' : 'Audio'} saved to vault`,
+              detail: path.basename(saved),
+            });
+          } else {
+            dialog.showMessageBox({
+              type: 'error',
+              title: 'Save Failed',
+              message: `Failed to save ${params.mediaType} to vault`,
+            });
+          }
+        },
+      }));
+      menu.append(new MenuItem({
+        label: `Save ${params.mediaType === 'video' ? 'Video' : 'Audio'} As...`,
+        click: async () => {
+          const ext = path.extname(new URL(params.srcURL).pathname) || (params.mediaType === 'video' ? '.mp4' : '.mp3');
+          const result = await dialog.showSaveDialog({
+            defaultPath: `${params.mediaType}-${Date.now()}${ext}`,
+          });
+          if (!result.canceled && result.filePath) {
+            try {
+              const response = await fetch(params.srcURL);
+              const buffer = Buffer.from(await response.arrayBuffer());
+              await fs.writeFile(result.filePath, buffer);
+            } catch (error) {
+              logger.error(`Failed to save ${params.mediaType}`, error as Error);
+            }
+          }
+        },
+      }));
+      menu.append(new MenuItem({
+        label: `Copy ${params.mediaType === 'video' ? 'Video' : 'Audio'} Address`,
         click: () => clipboard.writeText(params.srcURL),
       }));
       menu.append(new MenuItem({ type: 'separator' }));

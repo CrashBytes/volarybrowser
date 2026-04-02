@@ -198,6 +198,9 @@ export class IPCHandlers {
     // Register reading mode / dark mode handlers
     this.registerViewHandlers();
 
+    // Register vault media handlers
+    this.registerVaultMediaHandlers();
+
     // Register session handlers
     this.registerSessionHandlers();
 
@@ -792,6 +795,59 @@ export class IPCHandlers {
         mode: this.colorblindMode.getMode(),
         label: this.colorblindMode.getLabel(),
       }),
+    });
+  }
+
+  // -- Vault Media --
+
+  private registerVaultMediaHandlers(): void {
+    this.register({
+      channel: IPCChannel.VAULT_MEDIA_LIST,
+      handler: async () => {
+        const { promises: fs } = require('fs');
+        const path = require('path');
+        const mediaDir = path.join(require('electron').app.getPath('userData'), 'vault', 'media');
+        try {
+          const files = await fs.readdir(mediaDir);
+          const entries = [];
+          for (const file of files) {
+            const filePath = path.join(mediaDir, file);
+            const stat = await fs.stat(filePath);
+            const ext = path.extname(file).toLowerCase();
+            const isVideo = ['.mp4', '.webm', '.ogg', '.mov'].includes(ext);
+            entries.push({
+              name: file,
+              path: filePath,
+              size: stat.size,
+              type: isVideo ? 'video' : 'image',
+              savedAt: stat.mtimeMs,
+            });
+          }
+          return entries.sort((a: any, b: any) => b.savedAt - a.savedAt);
+        } catch {
+          return [];
+        }
+      },
+    });
+
+    this.register({
+      channel: IPCChannel.VAULT_MEDIA_OPEN,
+      handler: async (_event, payload: { path: string }) => {
+        require('electron').shell.openPath(payload.path);
+        return { success: true };
+      },
+    });
+
+    this.register({
+      channel: IPCChannel.VAULT_MEDIA_DELETE,
+      handler: async (_event, payload: { path: string }) => {
+        try {
+          await require('fs').promises.unlink(payload.path);
+          return { success: true };
+        } catch {
+          return { success: false };
+        }
+      },
     });
   }
 

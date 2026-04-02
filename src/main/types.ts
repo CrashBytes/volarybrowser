@@ -186,6 +186,11 @@ export enum IPCChannel {
   EXTENSION_REMOVE = 'extension:remove',
   EXTENSION_LOAD = 'extension:load',
 
+  // Vault media
+  VAULT_MEDIA_LIST = 'vault:media-list',
+  VAULT_MEDIA_OPEN = 'vault:media-open',
+  VAULT_MEDIA_DELETE = 'vault:media-delete',
+
   // Sessions
   SESSION_SAVE = 'session:save',
   SESSION_LIST = 'session:list',

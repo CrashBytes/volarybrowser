@@ -341,6 +341,15 @@ const api = {
   },
 
   /**
+   * Vault Media API — saved images and videos
+   */
+  vaultMedia: {
+    list: async () => ipcRenderer.invoke('vault:media-list'),
+    open: async (filePath: string) => ipcRenderer.invoke('vault:media-open', { path: filePath }),
+    delete: async (filePath: string) => ipcRenderer.invoke('vault:media-delete', { path: filePath }),
+  },
+
+  /**
    * Zoom API
    */
   zoom: {
