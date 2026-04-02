@@ -30,6 +30,9 @@ export const AddressBar: React.FC<AddressBarProps> = ({
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [suggestions, setSuggestions] = useState<Array<{ url: string; title: string }>>([]);
   const [selectedSuggestion, setSelectedSuggestion] = useState(-1);
+  const [readerActive, setReaderActive] = useState(false);
+  const [darkModeActive, setDarkModeActive] = useState(false);
+  const [colorblindLabel, setColorblindLabel] = useState('Off');
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -39,6 +42,17 @@ export const AddressBar: React.FC<AddressBarProps> = ({
       setInputValue(url);
     }
   }, [url, isFocused]);
+
+  // Load toolbar states on mount
+  useEffect(() => {
+    window.volary?.darkMode?.getStatus().then((r: any) => setDarkModeActive(r?.enabled ?? false)).catch(() => {});
+    window.volary?.colorblind?.getStatus().then((r: any) => setColorblindLabel(r?.label ?? 'Off')).catch(() => {});
+  }, []);
+
+  // Reset reader mode state when URL changes (navigating away exits reader)
+  useEffect(() => {
+    setReaderActive(false);
+  }, [url]);
 
   // Check bookmark status when URL changes
   useEffect(() => {
@@ -239,25 +253,34 @@ export const AddressBar: React.FC<AddressBarProps> = ({
 
       <div className="address-bar__tools">
         <button
-          className="address-bar__btn"
-          onClick={() => window.volary.readingMode.toggle()}
+          className={`address-bar__btn${readerActive ? ' address-bar__btn--active' : ''}`}
+          onClick={async () => {
+            const result = await window.volary.readingMode.toggle();
+            setReaderActive(result?.active ?? false);
+          }}
           title="Reading mode (Cmd+Shift+R)"
           aria-label="Toggle reading mode"
         >
           <ReaderIcon />
         </button>
         <button
-          className="address-bar__btn"
-          onClick={() => window.volary.darkMode.toggle()}
+          className={`address-bar__btn${darkModeActive ? ' address-bar__btn--active' : ''}`}
+          onClick={async () => {
+            const result = await window.volary.darkMode.toggle();
+            setDarkModeActive(result?.enabled ?? false);
+          }}
           title="Force dark mode"
           aria-label="Toggle dark mode on websites"
         >
           <MoonIcon />
         </button>
         <button
-          className="address-bar__btn"
-          onClick={() => window.volary.colorblind.cycle()}
-          title="Colorblind mode (click to cycle: Off → Deuteranopia → Protanopia → Tritanopia)"
+          className={`address-bar__btn${colorblindLabel !== 'Off' ? ' address-bar__btn--active' : ''}`}
+          onClick={async () => {
+            const result = await window.volary.colorblind.cycle();
+            setColorblindLabel(result?.label ?? 'Off');
+          }}
+          title={`Colorblind mode: ${colorblindLabel}`}
           aria-label="Cycle colorblind mode"
         >
           <EyeIcon />

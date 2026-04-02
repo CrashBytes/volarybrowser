@@ -18,6 +18,7 @@ import { VaultUnlock } from './components/VaultUnlock';
 import { FindBar } from './components/FindBar';
 import { DownloadBar } from './components/DownloadBar';
 import { NewTabPage } from './components/NewTabPage';
+import { BookmarkBar } from './components/BookmarkBar';
 import { useBrowserStore } from './store/browser-store';
 
 export const App: React.FC = () => {
@@ -299,6 +300,7 @@ export const App: React.FC = () => {
           onStop={() => window.volary.navigation.reload()}
         />
         <FindBar />
+        <BookmarkBar />
       </header>
 
       <main className="app-content">

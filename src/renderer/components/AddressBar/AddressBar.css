@@ -45,6 +45,11 @@
   background-color: var(--color-bg-elevated, #444);
 }
 
+.address-bar__btn--active {
+  color: #6366f1 !important;
+  background: rgba(99, 102, 241, 0.15);
+}
+
 .address-bar__btn:disabled {
   opacity: 0.25;
   cursor: default;
