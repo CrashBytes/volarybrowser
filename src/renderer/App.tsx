@@ -124,9 +124,14 @@ export const App: React.FC = () => {
     const handleOpenFind = () => openFind();
     const handleToggleReading = () => window.volary.readingMode.toggle();
     const handleOpenSettings = (_event: unknown, section?: string) => {
-      setSettingsSection(section);
+      setSettingsSection(typeof section === 'string' ? section : undefined);
       setSettingsOpen(true);
     };
+    const handleOpenSettingsDOM = () => {
+      setSettingsSection(undefined);
+      setSettingsOpen(true);
+    };
+    window.addEventListener('volary:open-settings', handleOpenSettingsDOM);
 
     window.volary.on('vault:status-changed', handleVaultChange);
     window.volary.on('tab:updated', handleTabUpdate);
@@ -146,6 +151,7 @@ export const App: React.FC = () => {
       window.volary.off('open-find', handleOpenFind);
       window.volary.off('open-settings', handleOpenSettings);
       window.volary.off('toggle-reading-mode', handleToggleReading);
+      window.removeEventListener('volary:open-settings', handleOpenSettingsDOM);
     };
   }, []);
 

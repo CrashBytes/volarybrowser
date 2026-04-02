@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { BackIcon, ForwardIcon, ReloadIcon, StopIcon, LockIcon, UnlockIcon, ReaderIcon, MoonIcon, EyeIcon, BookmarkIcon, BookmarkFilledIcon } from '../../assets/icons/NavIcons';
+import { BackIcon, ForwardIcon, ReloadIcon, StopIcon, LockIcon, UnlockIcon, ReaderIcon, MoonIcon, EyeIcon, BookmarkIcon, BookmarkFilledIcon, GearIcon } from '../../assets/icons/NavIcons';
 import './AddressBar.css';
 
 interface AddressBarProps {
@@ -284,6 +284,14 @@ export const AddressBar: React.FC<AddressBarProps> = ({
           aria-label="Cycle colorblind mode"
         >
           <EyeIcon />
+        </button>
+        <button
+          className="address-bar__btn"
+          onClick={() => window.dispatchEvent(new CustomEvent('volary:open-settings'))}
+          title="Settings (Cmd+,)"
+          aria-label="Open settings"
+        >
+          <GearIcon />
         </button>
       </div>
 

@@ -429,6 +429,12 @@ export class TabManager {
       } else if (input.shift && input.key === 'R' && input.type === 'keyDown') {
         event.preventDefault();
         this.window.webContents.send('toggle-reading-mode');
+      } else if (input.key === 'p' && input.type === 'keyDown') {
+        event.preventDefault();
+        wc.print();
+      } else if (input.key === ',' && input.type === 'keyDown') {
+        event.preventDefault();
+        this.window.webContents.send('open-settings');
       }
     });
 
