@@ -154,7 +154,11 @@ export const VaultInitialize: React.FC<VaultInitializeProps> = ({
               </div>
             )}
 
-            <p className="form-hint">Use a mix of uppercase, lowercase, numbers, and symbols</p>
+            <p className={`form-hint${password.length > 0 && password.length < 12 ? ' form-hint--warning' : ''}`}>
+              {password.length > 0 && password.length < 12
+                ? `${12 - password.length} more characters needed (minimum 12)`
+                : 'Use a mix of uppercase, lowercase, numbers, and symbols'}
+            </p>
           </div>
 
           <div className="form-group">
@@ -217,7 +221,9 @@ export const VaultInitialize: React.FC<VaultInitializeProps> = ({
               </button>
             )}
             <button type="submit" className="btn btn-primary" disabled={isSubmitting || password.length < 12}>
-              {isSubmitting ? 'Creating Vault...' : 'Create Vault'}
+              {isSubmitting ? 'Creating Vault...'
+                : password.length < 12 ? `Create Vault (${12 - password.length} more chars)`
+                : 'Create Vault'}
             </button>
           </div>
         </form>

@@ -254,6 +254,11 @@
   margin: 0;
 }
 
+.form-hint--warning {
+  color: #f57c00 !important;
+  font-weight: 500;
+}
+
 .security-notice strong { color: #f57c00; }
 
 .btn-skip {

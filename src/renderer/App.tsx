@@ -49,8 +49,9 @@ export const App: React.FC = () => {
   const activeTab = tabs.find((t) => t.id === activeTabId) || null;
 
   // Whether the BrowserView should be hidden (modal, panel, or new tab page)
-  const isModalOpen = (!vaultStatus.isLoading && !vaultStatus.skipped &&
-    (!vaultStatus.hasVault || !vaultStatus.isUnlocked))
+  const vaultModalVisible = !vaultStatus.skipped &&
+    (vaultStatus.isLoading || !vaultStatus.hasVault || !vaultStatus.isUnlocked);
+  const isModalOpen = vaultModalVisible
     || showBlockedPanel
     || (activeTab != null && !activeTab.url);
 
