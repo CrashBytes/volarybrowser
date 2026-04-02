@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { BackIcon, ForwardIcon, ReloadIcon, StopIcon, LockIcon, UnlockIcon } from '../../assets/icons/NavIcons';
 import './AddressBar.css';
 
 interface AddressBarProps {
@@ -83,7 +84,7 @@ export const AddressBar: React.FC<AddressBarProps> = ({
           title="Go back"
           aria-label="Go back"
         >
-          &#8592;
+          <BackIcon />
         </button>
         <button
           className="address-bar__btn"
@@ -92,7 +93,7 @@ export const AddressBar: React.FC<AddressBarProps> = ({
           title="Go forward"
           aria-label="Go forward"
         >
-          &#8594;
+          <ForwardIcon />
         </button>
         <button
           className="address-bar__btn"
@@ -100,14 +101,14 @@ export const AddressBar: React.FC<AddressBarProps> = ({
           title={isLoading ? 'Stop' : 'Reload'}
           aria-label={isLoading ? 'Stop loading' : 'Reload page'}
         >
-          {isLoading ? '\u00D7' : '\u21BB'}
+          {isLoading ? <StopIcon /> : <ReloadIcon />}
         </button>
       </div>
 
       <div className="address-bar__url-container">
         {!isFocused && url && (
           <span className={`address-bar__security ${isSecure ? 'address-bar__security--secure' : 'address-bar__security--insecure'}`}>
-            {isSecure ? '\uD83D\uDD12' : '\uD83D\uDD13'}
+            {isSecure ? <LockIcon /> : <UnlockIcon />}
           </span>
         )}
         <input

@@ -1,4 +1,5 @@
 import React from 'react';
+import { CloseIcon, PlusIcon } from '../../assets/icons/NavIcons';
 import './TabBar.css';
 
 interface TabBarProps {
@@ -60,7 +61,7 @@ export const TabBar: React.FC<TabBarProps> = ({
               aria-label={`Close ${tab.title || 'tab'}`}
               title="Close tab"
             >
-              &times;
+              <CloseIcon />
             </button>
           </div>
         ))}
@@ -71,7 +72,7 @@ export const TabBar: React.FC<TabBarProps> = ({
         aria-label="New tab"
         title="New tab (Ctrl+T)"
       >
-        +
+        <PlusIcon />
       </button>
     </div>
   );
