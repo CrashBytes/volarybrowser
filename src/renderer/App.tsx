@@ -108,16 +108,32 @@ export const App: React.FC = () => {
       setBlockedData(data.count, data.urls);
     };
 
+    const handleFocusAddressBar = () => {
+      setTimeout(() => {
+        const input = document.querySelector<HTMLInputElement>('.address-bar__input');
+        input?.focus();
+        input?.select();
+      }, 50);
+    };
+    const handleOpenFind = () => openFind();
+    const handleToggleReading = () => window.volary.readingMode.toggle();
+
     window.volary.on('vault:status-changed', handleVaultChange);
     window.volary.on('tab:updated', handleTabUpdate);
     window.volary.on('download:updated', handleDownloadUpdate);
     window.volary.on('privacy:blocked-count', handleBlockedCount);
+    window.volary.on('focus-address-bar', handleFocusAddressBar);
+    window.volary.on('open-find', handleOpenFind);
+    window.volary.on('toggle-reading-mode', handleToggleReading);
 
     return () => {
       window.volary.off('vault:status-changed', handleVaultChange);
       window.volary.off('tab:updated', handleTabUpdate);
       window.volary.off('download:updated', handleDownloadUpdate);
       window.volary.off('privacy:blocked-count', handleBlockedCount);
+      window.volary.off('focus-address-bar', handleFocusAddressBar);
+      window.volary.off('open-find', handleOpenFind);
+      window.volary.off('toggle-reading-mode', handleToggleReading);
     };
   }, []);
 

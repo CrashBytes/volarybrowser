@@ -398,6 +398,40 @@ export class TabManager {
       }
     });
 
+    // Capture keyboard shortcuts from BrowserView (web content has focus)
+    wc.on('before-input-event', (event, input) => {
+      if (!this.window || this.window.isDestroyed()) return;
+      const mod = input.meta || input.control;
+      if (!mod) return;
+
+      if (input.key === 't' && input.type === 'keyDown') {
+        event.preventDefault();
+        this.createTab({ active: true });
+        this.window.webContents.send('focus-address-bar');
+      } else if (input.key === 'w' && input.type === 'keyDown') {
+        event.preventDefault();
+        if (this.activeTabId) this.closeTab(this.activeTabId);
+      } else if (input.key === 'l' && input.type === 'keyDown') {
+        event.preventDefault();
+        this.window.webContents.send('focus-address-bar');
+      } else if (input.key === 'f' && input.type === 'keyDown') {
+        event.preventDefault();
+        this.window.webContents.send('open-find');
+      } else if ((input.key === '=' || input.key === '+') && input.type === 'keyDown') {
+        event.preventDefault();
+        this.zoomIn();
+      } else if (input.key === '-' && input.type === 'keyDown') {
+        event.preventDefault();
+        this.zoomOut();
+      } else if (input.key === '0' && input.type === 'keyDown') {
+        event.preventDefault();
+        this.zoomReset();
+      } else if (input.shift && input.key === 'R' && input.type === 'keyDown') {
+        event.preventDefault();
+        this.window.webContents.send('toggle-reading-mode');
+      }
+    });
+
     // Open target="_blank" links as new tabs
     wc.setWindowOpenHandler(({ url }) => {
       this.createTab({ url, active: true });

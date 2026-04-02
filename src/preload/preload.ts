@@ -438,6 +438,9 @@ const api = {
       'download:updated',
       'find:result',
       'privacy:blocked-count',
+      'focus-address-bar',
+      'open-find',
+      'toggle-reading-mode',
     ];
 
     if (!allowedChannels.includes(channel)) {
