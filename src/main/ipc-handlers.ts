@@ -60,6 +60,7 @@ import {
   getBookmarkTree, getChildren, isBookmarked, searchBookmarks,
 } from '../../core/storage/repositories/bookmarks';
 import { getSetting, setSetting, getAllSettings } from '../../core/storage/repositories/settings';
+import { saveSession, listSessions, getSession, deleteSession } from '../../core/storage/repositories/sessions';
 import { ExtensionManager } from './extensions/extension-manager';
 import { ReadingMode } from './reading-mode';
 import { ForceDarkMode } from './privacy/force-dark-mode';
@@ -196,6 +197,9 @@ export class IPCHandlers {
 
     // Register reading mode / dark mode handlers
     this.registerViewHandlers();
+
+    // Register session handlers
+    this.registerSessionHandlers();
 
     // Register extension handlers
     this.registerExtensionHandlers();
@@ -517,6 +521,14 @@ export class IPCHandlers {
       },
       validator: zodValidator(tabUpdateBoundsSchema),
     });
+
+    this.register({
+      channel: IPCChannel.TAB_TOGGLE_MUTE,
+      handler: async (_event, payload: { tabId: string }) => {
+        const muted = this.tabManager.toggleMute(payload.tabId);
+        return { muted };
+      },
+    });
   }
 
   // -- History --
@@ -780,6 +792,44 @@ export class IPCHandlers {
         mode: this.colorblindMode.getMode(),
         label: this.colorblindMode.getLabel(),
       }),
+    });
+  }
+
+  // -- Sessions --
+
+  private registerSessionHandlers(): void {
+    this.register({
+      channel: IPCChannel.SESSION_SAVE,
+      handler: async (_event, payload: { name: string }) => {
+        const tabs = this.tabManager.getAllTabStates();
+        const id = saveSession(payload.name, tabs.map(t => ({ url: t.url, title: t.title })));
+        return { success: true, id };
+      },
+    });
+
+    this.register({
+      channel: IPCChannel.SESSION_LIST,
+      handler: async () => listSessions(),
+    });
+
+    this.register({
+      channel: IPCChannel.SESSION_RESTORE,
+      handler: async (_event, payload: { id: number }) => {
+        const session = getSession(payload.id);
+        if (!session) return { success: false };
+        for (const tab of session.tabs) {
+          await this.tabManager.createTab({ url: tab.url, active: false });
+        }
+        return { success: true, tabCount: session.tabs.length };
+      },
+    });
+
+    this.register({
+      channel: IPCChannel.SESSION_DELETE,
+      handler: async (_event, payload: { id: number }) => {
+        deleteSession(payload.id);
+        return { success: true };
+      },
     });
   }
 

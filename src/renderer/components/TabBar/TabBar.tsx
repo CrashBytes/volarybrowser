@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CloseIcon, PlusIcon } from '../../assets/icons/NavIcons';
+import { CloseIcon, PlusIcon, SpeakerIcon, SpeakerMutedIcon } from '../../assets/icons/NavIcons';
 import './TabBar.css';
 
 interface TabBarProps {
@@ -120,6 +120,19 @@ export const TabBar: React.FC<TabBarProps> = ({
             )}
             <span className="tab-title">{tab.title || 'New Tab'}</span>
             {tab.isLoading && <span className="tab-spinner" />}
+            {(tab.isAudioPlaying || tab.isMuted) && (
+              <button
+                className="tab-audio"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  window.volary.tabs.toggleMute(tab.id);
+                }}
+                title={tab.isMuted ? 'Unmute tab' : 'Mute tab'}
+                aria-label={tab.isMuted ? 'Unmute tab' : 'Mute tab'}
+              >
+                {tab.isMuted ? <SpeakerMutedIcon /> : <SpeakerIcon />}
+              </button>
+            )}
             <button
               className="tab-close"
               onClick={(e) => {

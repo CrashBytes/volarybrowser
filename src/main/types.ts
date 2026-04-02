@@ -130,6 +130,7 @@ export enum IPCChannel {
   TAB_SWITCH = 'tab:switch',
   TAB_GET_ALL = 'tab:get-all',
   TAB_UPDATE_BOUNDS = 'tab:update-bounds',
+  TAB_TOGGLE_MUTE = 'tab:toggle-mute',
   
   // History
   HISTORY_SEARCH = 'history:search',
@@ -184,6 +185,12 @@ export enum IPCChannel {
   EXTENSION_TOGGLE = 'extension:toggle',
   EXTENSION_REMOVE = 'extension:remove',
   EXTENSION_LOAD = 'extension:load',
+
+  // Sessions
+  SESSION_SAVE = 'session:save',
+  SESSION_LIST = 'session:list',
+  SESSION_RESTORE = 'session:restore',
+  SESSION_DELETE = 'session:delete',
 
   // Workspace management
   WORKSPACE_CREATE = 'workspace:create',
@@ -270,6 +277,8 @@ export interface TabState {
   canGoBack: boolean;
   canGoForward: boolean;
   isActive: boolean;
+  isAudioPlaying: boolean;
+  isMuted: boolean;
   createdAt: number;
 }
 

@@ -157,6 +157,26 @@
   color: var(--color-text-primary, #e0e0e0);
 }
 
+.tab-audio {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: #6366f1;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 100ms;
+}
+
+.tab-audio:hover {
+  background: rgba(99, 102, 241, 0.2);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .tab-spinner {
     animation-duration: 2s;

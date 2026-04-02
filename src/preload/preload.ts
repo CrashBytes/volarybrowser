@@ -223,6 +223,13 @@ const api = {
     },
 
     /**
+     * Toggle mute on a tab
+     */
+    toggleMute: async (tabId: string) => {
+      return ipcRenderer.invoke('tab:toggle-mute', { tabId });
+    },
+
+    /**
      * Update tab content area bounds
      *
      * Called by renderer when chrome layout changes (resize, etc.)
@@ -356,6 +363,16 @@ const api = {
   darkMode: {
     toggle: async () => ipcRenderer.invoke('dark:toggle'),
     getStatus: async () => ipcRenderer.invoke('dark:status'),
+  },
+
+  /**
+   * Sessions API — save and restore tab groups
+   */
+  sessions: {
+    save: async (name: string) => ipcRenderer.invoke('session:save', { name }),
+    list: async () => ipcRenderer.invoke('session:list'),
+    restore: async (id: number) => ipcRenderer.invoke('session:restore', { id }),
+    delete: async (id: number) => ipcRenderer.invoke('session:delete', { id }),
   },
 
   /**

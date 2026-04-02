@@ -107,6 +107,8 @@ export class TabManager {
       canGoBack: false,
       canGoForward: false,
       isActive: false,
+      isAudioPlaying: false,
+      isMuted: false,
       createdAt: Date.now(),
     };
 
@@ -261,6 +263,18 @@ export class TabManager {
     }
   }
 
+  // -- Audio --
+
+  toggleMute(tabId: string): boolean {
+    const tab = this.tabs.get(tabId);
+    if (!tab) return false;
+    const muted = !tab.view.webContents.isAudioMuted();
+    tab.view.webContents.setAudioMuted(muted);
+    tab.state.isMuted = muted;
+    this.broadcastTabUpdate();
+    return muted;
+  }
+
   // -- Zoom --
 
   zoomIn(): number {
@@ -390,6 +404,10 @@ export class TabManager {
 
     wc.on('page-title-updated', (_event, title) => {
       this.updateTabState(tabId, { title });
+    });
+
+    wc.on('audio-state-changed', (_event, audible: boolean) => {
+      this.updateTabState(tabId, { isAudioPlaying: audible });
     });
 
     wc.on('page-favicon-updated', (_event, favicons) => {

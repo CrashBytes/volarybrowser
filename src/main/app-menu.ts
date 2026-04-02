@@ -9,6 +9,7 @@
 
 import { Menu, app, BrowserWindow, shell, dialog } from 'electron';
 import { TabManager } from './tab-manager';
+import { saveSession, listSessions, getSession } from '../../core/storage/repositories/sessions';
 import { ILogger } from './types';
 import { LoggerFactory } from './utils/logger';
 
@@ -69,6 +70,55 @@ export class AppMenu {
               const activeId = this.tabManager.getActiveTabId();
               if (activeId) this.tabManager.closeTab(activeId);
             },
+          },
+          { type: 'separator' },
+          {
+            label: 'Save Session...',
+            accelerator: 'CmdOrCtrl+Shift+S',
+            click: async () => {
+              const result = await dialog.showInputBox?.(mainWindow, {
+                title: 'Save Session',
+                label: 'Session name:',
+              }).catch(() => null);
+              // dialog.showInputBox doesn't exist in Electron, use showMessageBox prompt
+              const { response } = await dialog.showMessageBox(mainWindow, {
+                type: 'question',
+                title: 'Save Session',
+                message: 'Save all open tabs as a session?',
+                detail: 'You can restore them later from File > Restore Session.',
+                buttons: ['Cancel', 'Save'],
+                defaultId: 1,
+              });
+              if (response === 1) {
+                const tabs = this.tabManager.getAllTabStates();
+                const name = `Session ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`;
+                saveSession(name, tabs.map(t => ({ url: t.url, title: t.title })));
+              }
+            },
+          },
+          {
+            label: 'Restore Session',
+            submenu: (() => {
+              try {
+                const sessions = listSessions();
+                if (sessions.length === 0) {
+                  return [{ label: 'No saved sessions', enabled: false }];
+                }
+                return sessions.slice(0, 10).map((s: any) => ({
+                  label: `${s.name} (${s.tab_count} tabs)`,
+                  click: async () => {
+                    const session = getSession(s.id);
+                    if (session) {
+                      for (const tab of session.tabs) {
+                        await this.tabManager.createTab({ url: tab.url, active: false });
+                      }
+                    }
+                  },
+                }));
+              } catch {
+                return [{ label: 'No saved sessions', enabled: false }];
+              }
+            })(),
           },
           { type: 'separator' },
           {

@@ -109,6 +109,24 @@ const migrations: Migration[] = [
       );
     `,
   },
+  {
+    version: 6,
+    description: 'Named sessions for tab group save/restore',
+    up: `
+      CREATE TABLE IF NOT EXISTS saved_sessions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        created_at INTEGER NOT NULL DEFAULT (unixepoch())
+      );
+      CREATE TABLE IF NOT EXISTS saved_session_tabs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id INTEGER NOT NULL REFERENCES saved_sessions(id) ON DELETE CASCADE,
+        url TEXT NOT NULL,
+        title TEXT NOT NULL DEFAULT '',
+        position INTEGER NOT NULL DEFAULT 0
+      );
+    `,
+  },
 ];
 
 /**
