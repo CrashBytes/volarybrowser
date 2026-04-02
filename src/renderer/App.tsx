@@ -19,6 +19,7 @@ import { FindBar } from './components/FindBar';
 import { DownloadBar } from './components/DownloadBar';
 import { NewTabPage } from './components/NewTabPage';
 import { BookmarkBar } from './components/BookmarkBar';
+import { Settings } from './components/Settings';
 import { useBrowserStore } from './store/browser-store';
 
 export const App: React.FC = () => {
@@ -41,6 +42,8 @@ export const App: React.FC = () => {
 
   const [isMaximized, setIsMaximized] = React.useState(false);
   const [tabContextMenuOpen, setTabContextMenuOpen] = React.useState(false);
+  const [settingsOpen, setSettingsOpen] = React.useState(false);
+  const [settingsSection, setSettingsSection] = React.useState<string | undefined>();
 
   // Layout refs for bounds calculation
   const headerRef = useRef<HTMLElement>(null);
@@ -55,6 +58,7 @@ export const App: React.FC = () => {
   const isModalOpen = vaultModalVisible
     || showBlockedPanel
     || tabContextMenuOpen
+    || settingsOpen
     || (activeTab != null && !activeTab.url);
 
   /**
@@ -119,6 +123,10 @@ export const App: React.FC = () => {
     };
     const handleOpenFind = () => openFind();
     const handleToggleReading = () => window.volary.readingMode.toggle();
+    const handleOpenSettings = (_event: unknown, section?: string) => {
+      setSettingsSection(section);
+      setSettingsOpen(true);
+    };
 
     window.volary.on('vault:status-changed', handleVaultChange);
     window.volary.on('tab:updated', handleTabUpdate);
@@ -126,6 +134,7 @@ export const App: React.FC = () => {
     window.volary.on('privacy:blocked-count', handleBlockedCount);
     window.volary.on('focus-address-bar', handleFocusAddressBar);
     window.volary.on('open-find', handleOpenFind);
+    window.volary.on('open-settings', handleOpenSettings);
     window.volary.on('toggle-reading-mode', handleToggleReading);
 
     return () => {
@@ -135,6 +144,7 @@ export const App: React.FC = () => {
       window.volary.off('privacy:blocked-count', handleBlockedCount);
       window.volary.off('focus-address-bar', handleFocusAddressBar);
       window.volary.off('open-find', handleOpenFind);
+      window.volary.off('open-settings', handleOpenSettings);
       window.volary.off('toggle-reading-mode', handleToggleReading);
     };
   }, []);
@@ -352,6 +362,13 @@ export const App: React.FC = () => {
         <DownloadBar />
         <StatusBar />
       </footer>
+
+      {/* Settings */}
+      <Settings
+        isOpen={settingsOpen}
+        initialSection={settingsSection}
+        onClose={() => setSettingsOpen(false)}
+      />
 
       {/* Vault Modals */}
       {!vaultStatus.isLoading && !vaultStatus.skipped && (

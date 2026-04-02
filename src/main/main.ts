@@ -37,6 +37,7 @@ import { DownloadManager } from './download-manager';
 import { NetworkFilter } from './privacy/network-filter';
 import { PermissionHandler } from './permission-dialog';
 import { CrashRecovery } from './crash-recovery';
+import { AppMenu } from './app-menu';
 import { ReadingMode } from './reading-mode';
 import { ForceDarkMode } from './privacy/force-dark-mode';
 import { ColorblindMode } from './privacy/colorblind-mode';
@@ -304,6 +305,7 @@ class VolaryBrowser {
           }
         });
         this.downloadManager.initialize(mainWindow);
+        new AppMenu(this.tabManager).build(mainWindow);
         // Restore tabs from previous session (crash recovery)
         const savedTabs = this.crashRecovery.getSavedTabs();
         if (savedTabs.length > 0) {

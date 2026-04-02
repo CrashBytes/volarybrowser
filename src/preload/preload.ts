@@ -440,7 +440,12 @@ const api = {
       'privacy:blocked-count',
       'focus-address-bar',
       'open-find',
+      'open-settings',
       'toggle-reading-mode',
+      'toggle-dark-mode',
+      'toggle-bookmark',
+      'toggle-bookmarks-bar',
+      'set-colorblind',
     ];
 
     if (!allowedChannels.includes(channel)) {
