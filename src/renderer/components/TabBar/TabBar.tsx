@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { CloseIcon, PlusIcon } from '../../assets/icons/NavIcons';
 import './TabBar.css';
 
@@ -10,6 +10,13 @@ interface TabBarProps {
   onNewTab: () => void;
 }
 
+interface ContextMenu {
+  x: number;
+  y: number;
+  tabId: string;
+  tabIndex: number;
+}
+
 export const TabBar: React.FC<TabBarProps> = ({
   tabs,
   activeTabId,
@@ -17,18 +24,72 @@ export const TabBar: React.FC<TabBarProps> = ({
   onTabClose,
   onNewTab,
 }) => {
+  const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
+
   const handleMouseDown = (e: React.MouseEvent, tabId: string) => {
-    // Middle-click to close tab
     if (e.button === 1) {
       e.preventDefault();
       onTabClose(tabId);
     }
   };
 
+  const handleContextMenu = (e: React.MouseEvent, tabId: string, tabIndex: number) => {
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY, tabId, tabIndex });
+  };
+
+  const closeContextMenu = () => setContextMenu(null);
+
+  const closeTab = (tabId: string) => {
+    onTabClose(tabId);
+    closeContextMenu();
+  };
+
+  const closeTabsToRight = () => {
+    if (!contextMenu) return;
+    const toClose = tabs.slice(contextMenu.tabIndex + 1);
+    for (const tab of toClose) {
+      onTabClose(tab.id);
+    }
+    closeContextMenu();
+  };
+
+  const closeTabsToLeft = () => {
+    if (!contextMenu) return;
+    const toClose = tabs.slice(0, contextMenu.tabIndex);
+    for (const tab of toClose) {
+      onTabClose(tab.id);
+    }
+    closeContextMenu();
+  };
+
+  const closeOtherTabs = () => {
+    if (!contextMenu) return;
+    for (const tab of tabs) {
+      if (tab.id !== contextMenu.tabId) {
+        onTabClose(tab.id);
+      }
+    }
+    closeContextMenu();
+  };
+
+  const duplicateTab = () => {
+    if (!contextMenu) return;
+    const tab = tabs.find(t => t.id === contextMenu.tabId);
+    if (tab?.url) {
+      window.volary.tabs.create(tab.url);
+    }
+    closeContextMenu();
+  };
+
+  const hasTabsToRight = contextMenu ? contextMenu.tabIndex < tabs.length - 1 : false;
+  const hasTabsToLeft = contextMenu ? contextMenu.tabIndex > 0 : false;
+  const hasOtherTabs = tabs.length > 1;
+
   return (
-    <div className="tab-bar" role="tablist">
+    <div className="tab-bar" role="tablist" onClick={closeContextMenu}>
       <div className="tab-list">
-        {tabs.map((tab) => (
+        {tabs.map((tab, index) => (
           <div
             key={tab.id}
             className={`tab-item${tab.id === activeTabId ? ' tab-item--active' : ''}${tab.isLoading ? ' tab-item--loading' : ''}`}
@@ -36,6 +97,7 @@ export const TabBar: React.FC<TabBarProps> = ({
             aria-selected={tab.id === activeTabId}
             onClick={() => onTabSwitch(tab.id)}
             onMouseDown={(e) => handleMouseDown(e, tab.id)}
+            onContextMenu={(e) => handleContextMenu(e, tab.id, index)}
             title={tab.url || tab.title}
           >
             {tab.favicon ? (
@@ -74,6 +136,33 @@ export const TabBar: React.FC<TabBarProps> = ({
       >
         <PlusIcon />
       </button>
+
+      {contextMenu && (
+        <>
+          <div className="tab-context-overlay" onClick={closeContextMenu} />
+          <div
+            className="tab-context-menu"
+            style={{ left: contextMenu.x, top: contextMenu.y }}
+          >
+            <button className="tab-context-item" onClick={duplicateTab}>
+              Duplicate Tab
+            </button>
+            <div className="tab-context-separator" />
+            <button className="tab-context-item" onClick={() => closeTab(contextMenu.tabId)}>
+              Close Tab
+            </button>
+            <button className="tab-context-item" onClick={closeTabsToRight} disabled={!hasTabsToRight}>
+              Close Tabs to the Right
+            </button>
+            <button className="tab-context-item" onClick={closeTabsToLeft} disabled={!hasTabsToLeft}>
+              Close Tabs to the Left
+            </button>
+            <button className="tab-context-item" onClick={closeOtherTabs} disabled={!hasOtherTabs}>
+              Close Other Tabs
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 };
