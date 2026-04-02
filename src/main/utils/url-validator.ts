@@ -18,7 +18,28 @@ export interface ValidatedUrl {
 }
 
 const INTERNAL_SCHEMES = ['about:', 'chrome:', 'volary:', 'devtools:', 'data:', 'blob:'];
-const SEARCH_ENGINE_URL = 'https://duckduckgo.com/?q=';
+
+const SEARCH_ENGINES: Record<string, string> = {
+  duckduckgo: 'https://duckduckgo.com/?q=',
+  google: 'https://www.google.com/search?q=',
+  bing: 'https://www.bing.com/search?q=',
+  brave: 'https://search.brave.com/search?q=',
+};
+
+let currentSearchEngine = 'duckduckgo';
+
+/**
+ * Set the search engine used for search queries
+ */
+export function setSearchEngine(engine: string): void {
+  if (SEARCH_ENGINES[engine]) {
+    currentSearchEngine = engine;
+  }
+}
+
+function getSearchUrl(): string {
+  return SEARCH_ENGINES[currentSearchEngine] || SEARCH_ENGINES.duckduckgo;
+}
 
 /**
  * Validate and normalize a user-entered string into a loadable URL
@@ -53,7 +74,7 @@ export function validateAndNormalizeUrl(input: string): ValidatedUrl {
 
   // Treat as search query
   return {
-    url: `${SEARCH_ENGINE_URL}${encodeURIComponent(trimmed)}`,
+    url: `${getSearchUrl()}${encodeURIComponent(trimmed)}`,
     isSearch: true,
     wasUpgraded: false,
   };

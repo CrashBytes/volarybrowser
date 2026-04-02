@@ -388,3 +388,77 @@
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+/* Screen reader only utility */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  border: 0;
+}
+
+/* Skip Navigation — visible only on focus for keyboard users */
+.skip-nav {
+  position: absolute;
+  top: -100px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 24px;
+  background: #6366f1;
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 0 0 8px 8px;
+  z-index: 9999;
+  text-decoration: none;
+  transition: top 200ms;
+}
+
+.skip-nav:focus {
+  top: 0;
+  outline: none;
+}
+
+/* High Contrast Mode — activated via settings */
+.app--high-contrast {
+  --color-text-primary: #ffffff !important;
+  --color-text-secondary: #e0e0e0 !important;
+  --color-text-muted: #cccccc !important;
+  --color-bg-base: #000000 !important;
+  --color-bg-elevated: #111111 !important;
+  --color-surface-elevated: #111111 !important;
+  --color-border: #666666 !important;
+  --color-border-base: #666666 !important;
+}
+
+.app--high-contrast .address-bar__btn,
+.app--high-contrast .tab-item,
+.app--high-contrast .tab-close,
+.app--high-contrast .bookmark-bar__item {
+  color: #ffffff;
+}
+
+.app--high-contrast .address-bar__url-container {
+  border-color: #888;
+}
+
+.app--high-contrast .tab-item--active {
+  background: #333 !important;
+  border-color: #fff !important;
+}
+
+/* Reduced Motion Mode — activated via settings */
+.app--reduced-motion,
+.app--reduced-motion * {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+/* Screen Reader Optimized — larger focus indicators */
+.app--screen-reader *:focus-visible {
+  outline: 3px solid #6366f1 !important;
+  outline-offset: 2px !important;
+}

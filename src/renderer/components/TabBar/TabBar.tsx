@@ -98,7 +98,7 @@ export const TabBar: React.FC<TabBarProps> = ({
         {tabs.map((tab, index) => (
           <div
             key={tab.id}
-            className={`tab-item${tab.id === activeTabId ? ' tab-item--active' : ''}${tab.isLoading ? ' tab-item--loading' : ''}`}
+            className={`tab-item${tab.id === activeTabId ? ' tab-item--active' : ''}${tab.isLoading ? ' tab-item--loading' : ''}${tab.isPinned ? ' tab-item--pinned' : ''}`}
             role="tab"
             aria-selected={tab.id === activeTabId}
             onClick={() => onTabSwitch(tab.id)}
@@ -118,9 +118,9 @@ export const TabBar: React.FC<TabBarProps> = ({
             ) : (
               <span className="tab-favicon-placeholder" />
             )}
-            <span className="tab-title">{tab.title || 'New Tab'}</span>
-            {tab.isLoading && <span className="tab-spinner" />}
-            {(tab.isAudioPlaying || tab.isMuted) && (
+            {!tab.isPinned && <span className="tab-title">{tab.title || 'New Tab'}</span>}
+            {!tab.isPinned && tab.isLoading && <span className="tab-spinner" />}
+            {!tab.isPinned && (tab.isAudioPlaying || tab.isMuted) && (
               <button
                 className="tab-audio"
                 onClick={(e) => {
@@ -133,17 +133,19 @@ export const TabBar: React.FC<TabBarProps> = ({
                 {tab.isMuted ? <SpeakerMutedIcon /> : <SpeakerIcon />}
               </button>
             )}
-            <button
-              className="tab-close"
-              onClick={(e) => {
-                e.stopPropagation();
-                onTabClose(tab.id);
-              }}
-              aria-label={`Close ${tab.title || 'tab'}`}
-              title="Close tab"
-            >
-              <CloseIcon />
-            </button>
+            {!tab.isPinned && (
+              <button
+                className="tab-close"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onTabClose(tab.id);
+                }}
+                aria-label={`Close ${tab.title || 'tab'}`}
+                title="Close tab"
+              >
+                <CloseIcon />
+              </button>
+            )}
           </div>
         ))}
       </div>
@@ -166,6 +168,12 @@ export const TabBar: React.FC<TabBarProps> = ({
               top: contextMenu.y + 4,
             }}
           >
+            <button className="tab-context-item" onClick={() => {
+              window.volary.tabs.togglePin(contextMenu.tabId);
+              closeContextMenu();
+            }}>
+              {tabs.find(t => t.id === contextMenu.tabId)?.isPinned ? 'Unpin Tab' : 'Pin Tab'}
+            </button>
             <button className="tab-context-item" onClick={duplicateTab}>
               Duplicate Tab
             </button>

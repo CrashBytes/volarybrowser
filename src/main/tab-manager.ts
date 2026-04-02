@@ -109,6 +109,7 @@ export class TabManager {
       isActive: false,
       isAudioPlaying: false,
       isMuted: false,
+      isPinned: false,
       createdAt: Date.now(),
     };
 
@@ -261,6 +262,16 @@ export class TabManager {
       this.logger.error('Navigation failed', error as Error, { url });
       return { success: false, message: (error as Error).message };
     }
+  }
+
+  // -- Pin --
+
+  togglePin(tabId: string): boolean {
+    const tab = this.tabs.get(tabId);
+    if (!tab) return false;
+    tab.state.isPinned = !tab.state.isPinned;
+    this.broadcastTabUpdate();
+    return tab.state.isPinned;
   }
 
   // -- Audio --

@@ -38,6 +38,8 @@ import { NetworkFilter } from './privacy/network-filter';
 import { PermissionHandler } from './permission-dialog';
 import { CrashRecovery } from './crash-recovery';
 import { AppMenu } from './app-menu';
+import { setSearchEngine } from './utils/url-validator';
+import { getSetting } from '../../core/storage/repositories/settings';
 import { ReadingMode } from './reading-mode';
 import { ForceDarkMode } from './privacy/force-dark-mode';
 import { ColorblindMode } from './privacy/colorblind-mode';
@@ -267,6 +269,12 @@ class VolaryBrowser {
       // Initialize database (required by vault, window state, and settings)
       initDatabase(config.app.userDataPath);
       this.logger.debug('Database initialized');
+
+      // Load user settings
+      try {
+        const searchEngine = getSetting('searchEngine', 'duckduckgo');
+        setSearchEngine(searchEngine as string);
+      } catch { /* use defaults */ }
 
       // Initialize privacy/security systems
       this.networkFilter.initialize();

@@ -223,6 +223,13 @@ const api = {
     },
 
     /**
+     * Toggle pin on a tab
+     */
+    togglePin: async (tabId: string) => {
+      return ipcRenderer.invoke('tab:toggle-pin', { tabId });
+    },
+
+    /**
      * Toggle mute on a tab
      */
     toggleMute: async (tabId: string) => {

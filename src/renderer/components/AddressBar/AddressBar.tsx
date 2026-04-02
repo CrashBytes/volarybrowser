@@ -171,8 +171,8 @@ export const AddressBar: React.FC<AddressBarProps> = ({
   const isSecure = url.startsWith('https://');
 
   return (
-    <div className="address-bar">
-      <div className="address-bar__nav">
+    <div className="address-bar" role="toolbar" aria-label="Navigation toolbar">
+      <nav className="address-bar__nav" aria-label="Page navigation">
         <button
           className="address-bar__btn"
           onClick={onGoBack}
@@ -199,7 +199,7 @@ export const AddressBar: React.FC<AddressBarProps> = ({
         >
           {isLoading ? <StopIcon /> : <ReloadIcon />}
         </button>
-      </div>
+      </nav>
 
       <div className="address-bar__url-container">
         {!isFocused && url && (
@@ -251,7 +251,7 @@ export const AddressBar: React.FC<AddressBarProps> = ({
         </div>
       )}
 
-      <div className="address-bar__tools">
+      <div className="address-bar__tools" role="group" aria-label="Browser tools">
         <button
           className={`address-bar__btn${readerActive ? ' address-bar__btn--active' : ''}`}
           onClick={async () => {

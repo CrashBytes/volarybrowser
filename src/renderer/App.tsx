@@ -44,6 +44,9 @@ export const App: React.FC = () => {
   const [tabContextMenuOpen, setTabContextMenuOpen] = React.useState(false);
   const [settingsOpen, setSettingsOpen] = React.useState(false);
   const [settingsSection, setSettingsSection] = React.useState<string | undefined>();
+  const [highContrast, setHighContrast] = React.useState(false);
+  const [reducedMotion, setReducedMotion] = React.useState(false);
+  const [screenReaderMode, setScreenReaderMode] = React.useState(false);
 
   // Layout refs for bounds calculation
   const headerRef = useRef<HTMLElement>(null);
@@ -99,6 +102,7 @@ export const App: React.FC = () => {
     setPlatform(window.volary.system.getPlatform());
     checkVaultStatus();
     fetchTabs();
+    loadAccessibilitySettings();
 
     // Subscribe to events
     const handleVaultChange = (_event: unknown, status: { isUnlocked: boolean; hasVault: boolean }) => {
@@ -250,6 +254,15 @@ export const App: React.FC = () => {
     }
   };
 
+  const loadAccessibilitySettings = async () => {
+    try {
+      const all = await window.volary.settings.getAll();
+      setHighContrast(!!all.highContrast);
+      setReducedMotion(!!all.reducedMotion);
+      setScreenReaderMode(!!all.screenReaderOptimized);
+    } catch { /* use defaults */ }
+  };
+
   // -- Window controls --
 
   const handleMinimize = () => window.volary.window.minimize();
@@ -305,8 +318,17 @@ export const App: React.FC = () => {
   );
 
   return (
-    <div className="app">
-      <header className="app-header" ref={headerRef}>
+    <div
+      className={`app${highContrast ? ' app--high-contrast' : ''}${reducedMotion ? ' app--reduced-motion' : ''}${screenReaderMode ? ' app--screen-reader' : ''}`}
+      role="application"
+      aria-label="Volary Browser"
+    >
+      {/* Skip navigation link for keyboard/screen reader users */}
+      <a href="#main-content" className="skip-nav" tabIndex={0}>
+        Skip to content
+      </a>
+
+      <header className="app-header" ref={headerRef} role="banner">
         <WindowChrome />
         <TabBar
           tabs={tabs}
@@ -339,13 +361,13 @@ export const App: React.FC = () => {
         <BookmarkBar />
       </header>
 
-      <main className="app-content">
+      <main className="app-content" id="main-content" role="main" aria-label="Web content">
         {/* Web content is rendered by BrowserView in main process */}
         {/* Show new tab page when the active tab has no URL */}
         {activeTab && !activeTab.url && <NewTabPage />}
       </main>
 
-      <footer className="app-footer" ref={footerRef}>
+      <footer className="app-footer" ref={footerRef} role="contentinfo" aria-label="Status bar">
         {showBlockedPanel && blockedUrls.length > 0 && (
           <div className="blocked-panel">
             <div className="blocked-panel__header">
@@ -369,11 +391,19 @@ export const App: React.FC = () => {
         <StatusBar />
       </footer>
 
+      {/* Screen reader announcements */}
+      <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+        {activeTab ? `${activeTab.title || 'New Tab'} - ${activeTab.url || 'blank'}` : ''}
+      </div>
+
       {/* Settings */}
       <Settings
         isOpen={settingsOpen}
         initialSection={settingsSection}
-        onClose={() => setSettingsOpen(false)}
+        onClose={() => {
+          setSettingsOpen(false);
+          loadAccessibilitySettings(); // Reload settings that affect the chrome
+        }}
       />
 
       {/* Vault Modals */}

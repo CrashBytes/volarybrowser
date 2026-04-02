@@ -526,6 +526,14 @@ export class IPCHandlers {
     });
 
     this.register({
+      channel: IPCChannel.TAB_TOGGLE_PIN,
+      handler: async (_event, payload: { tabId: string }) => {
+        const pinned = this.tabManager.togglePin(payload.tabId);
+        return { pinned };
+      },
+    });
+
+    this.register({
       channel: IPCChannel.TAB_TOGGLE_MUTE,
       handler: async (_event, payload: { tabId: string }) => {
         const muted = this.tabManager.toggleMute(payload.tabId);

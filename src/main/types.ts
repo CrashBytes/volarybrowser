@@ -131,6 +131,7 @@ export enum IPCChannel {
   TAB_GET_ALL = 'tab:get-all',
   TAB_UPDATE_BOUNDS = 'tab:update-bounds',
   TAB_TOGGLE_MUTE = 'tab:toggle-mute',
+  TAB_TOGGLE_PIN = 'tab:toggle-pin',
   
   // History
   HISTORY_SEARCH = 'history:search',
@@ -284,6 +285,7 @@ export interface TabState {
   isActive: boolean;
   isAudioPlaying: boolean;
   isMuted: boolean;
+  isPinned: boolean;
   createdAt: number;
 }
 
