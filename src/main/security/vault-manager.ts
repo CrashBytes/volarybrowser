@@ -148,12 +148,18 @@ export class VaultManager {
     try {
       this.logger.info('Initializing new vault', { authLevel });
 
-      // Check if vault already exists
+      // Check if vault already exists on disk
       if (await this.hasVault()) {
         return {
           success: false,
-          message: 'Vault already exists',
+          message: 'Vault already exists. Please unlock instead.',
         };
+      }
+
+      // If the vault object thinks it's initialized but no file exists,
+      // create a fresh vault instance
+      if (this.vault.getStatus() !== VaultStatus.UNINITIALIZED) {
+        this.vault = new Vault();
       }
 
       // Validate password
