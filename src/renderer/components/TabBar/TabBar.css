@@ -176,13 +176,14 @@
 .tab-context-menu {
   position: fixed;
   z-index: 1000;
-  min-width: 200px;
+  min-width: 220px;
   background: var(--color-bg-elevated, #2a2a2a);
   border: 1px solid var(--color-border, #444);
   border-radius: 8px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
   padding: 4px 0;
-  overflow: hidden;
+  overflow: visible;
+  -webkit-app-region: no-drag;
 }
 
 .tab-context-item {
@@ -204,8 +205,9 @@
 }
 
 .tab-context-item:disabled {
-  color: var(--color-text-muted, #555);
+  color: var(--color-text-muted, #444);
   cursor: default;
+  opacity: 0.4;
 }
 
 .tab-context-separator {

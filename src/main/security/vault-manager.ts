@@ -284,9 +284,22 @@ export class VaultManager {
     const status = this.vault.getStatus();
     return {
       isUnlocked: status === VaultStatus.UNLOCKED,
-      hasVault: status !== VaultStatus.UNINITIALIZED,
+      // Use both internal state AND file existence to determine if vault exists
+      hasVault: status !== VaultStatus.UNINITIALIZED || this.metadataExistsSync(),
       authLevel: this.vault.getAuthLevel(),
     };
+  }
+
+  /**
+   * Synchronous check if metadata file exists
+   */
+  private metadataExistsSync(): boolean {
+    try {
+      require('fs').accessSync(this.metadataPath);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   /**
