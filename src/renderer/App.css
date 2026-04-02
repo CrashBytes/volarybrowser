@@ -77,6 +77,11 @@
   background: var(--color-surface-elevated);
 }
 
+.mac-drag-region {
+  min-width: 78px;
+  height: 40px;
+}
+
 /**
  * macOS Traffic Lights
  * 
@@ -291,6 +296,86 @@
 .status-text {
   color: var(--color-text-secondary);
   white-space: nowrap;
+}
+
+.status-clickable {
+  cursor: pointer;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.status-clickable:hover {
+  background: var(--color-surface-elevated, #333);
+}
+
+/* Blocked requests panel — rendered inline inside footer */
+.blocked-panel {
+  max-height: 250px;
+  background: var(--color-surface, #222);
+  border-bottom: 1px solid var(--color-border, #444);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.blocked-panel__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--color-border, #444);
+  font-size: 13px;
+  color: var(--color-text-primary, #e0e0e0);
+}
+
+.blocked-panel__close {
+  background: none;
+  border: none;
+  color: var(--color-text-secondary, #888);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.blocked-panel__close:hover {
+  color: var(--color-text-primary, #e0e0e0);
+}
+
+.blocked-panel__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.blocked-panel__item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 14px;
+  font-size: 12px;
+  border-bottom: 1px solid var(--color-border, #333);
+}
+
+.blocked-panel__item:last-child {
+  border-bottom: none;
+}
+
+.blocked-panel__domain {
+  color: var(--color-text-secondary, #aaa);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.blocked-panel__count {
+  color: var(--color-text-secondary, #888);
+  font-weight: 600;
+  margin-left: 8px;
+  min-width: 20px;
+  text-align: right;
 }
 
 /**

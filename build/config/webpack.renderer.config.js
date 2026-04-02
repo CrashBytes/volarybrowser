@@ -34,6 +34,7 @@ module.exports = merge(common, {
     path: path.resolve(rootDir, 'dist'),
     filename: '[name].js',
     publicPath: isDevelopment ? 'http://localhost:3000/' : './',
+    globalObject: 'globalThis',
   },
 
   module: {
@@ -64,14 +65,12 @@ module.exports = merge(common, {
       template: path.resolve(rootDir, 'src/renderer/index.html'),
       inject: 'body',
       scriptLoading: 'defer',
-      meta: {
+      meta: isDevelopment ? {
         'Content-Security-Policy': {
           'http-equiv': 'Content-Security-Policy',
-          content: isDevelopment
-            ? "default-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:*; script-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src 'self' ws://localhost:*;"
-            : "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:;",
+          content: "default-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:*; script-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src 'self' ws://localhost:*;",
         },
-      },
+      } : {},
     }),
 
     // Provide Node.js globals for browser environment
@@ -83,8 +82,13 @@ module.exports = merge(common, {
     new webpack.DefinePlugin({
       'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
       'process.env.VOLARY_VERSION': JSON.stringify(require('../../package.json').version),
-      // Define 'global' as 'window' for browser context
-      'global': 'window',
+    }),
+
+    // Shim 'global' for libraries that expect Node.js environment
+    new webpack.BannerPlugin({
+      banner: 'if(typeof globalThis.global==="undefined"){globalThis.global=globalThis;}',
+      raw: true,
+      entryOnly: false,
     }),
   ],
 

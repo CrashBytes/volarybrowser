@@ -28,13 +28,19 @@ module.exports = merge(common, {
     clean: true,
   },
 
-  externals: {
+  externals: [
     // Don't bundle native modules
-    electron: 'commonjs2 electron',
-    'hash-wasm': 'commonjs2 hash-wasm',
-    '@noble/ciphers': 'commonjs2 @noble/ciphers',
-    '@noble/hashes': 'commonjs2 @noble/hashes',
-  },
+    { electron: 'commonjs2 electron' },
+    { 'hash-wasm': 'commonjs2 hash-wasm' },
+    { 'better-sqlite3': 'commonjs2 better-sqlite3' },
+    // Handle @noble subpath exports (e.g. @noble/hashes/sha2.js)
+    function({ request }, callback) {
+      if (/^@noble\/(ciphers|hashes)(\/|$)/.test(request)) {
+        return callback(null, 'commonjs2 ' + request);
+      }
+      callback();
+    },
+  ],
 
   plugins: [
     new webpack.DefinePlugin({

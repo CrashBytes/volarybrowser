@@ -27,6 +27,40 @@ import { LoggerFactory } from './utils/logger';
 import { WindowManager } from './window-manager';
 import { VaultManager } from './security/vault-manager';
 import { TabManager } from './tab-manager';
+import { HistoryManager } from './history-manager';
+import { DownloadManager } from './download-manager';
+import { FindInPage } from './find-in-page';
+import {
+  windowFullscreenSchema,
+  vaultInitializeSchema,
+  vaultUnlockSchema,
+  navNavigateToSchema,
+  tabCloseSchema,
+  tabSwitchSchema,
+  tabUpdateBoundsSchema,
+  historySearchSchema,
+  historyGetRecentSchema,
+  historyDeleteSchema,
+  bookmarkCreateSchema,
+  bookmarkDeleteSchema,
+  bookmarkUpdateSchema,
+  bookmarkMoveSchema,
+  bookmarkGetTreeSchema,
+  bookmarkGetChildrenSchema,
+  bookmarkIsBookmarkedSchema,
+  bookmarkSearchSchema,
+  downloadActionSchema,
+  settingsGetSchema,
+  settingsSetSchema,
+  findStartSchema,
+  zodValidator,
+} from './schemas/ipc-schemas';
+import {
+  createBookmark, deleteBookmark, updateBookmark, moveBookmark,
+  getBookmarkTree, getChildren, isBookmarked, searchBookmarks,
+} from '../../core/storage/repositories/bookmarks';
+import { getSetting, setSetting, getAllSettings } from '../../core/storage/repositories/settings';
+import { ExtensionManager } from './extensions/extension-manager';
 
 /**
  * IPC Handler function signature
@@ -77,6 +111,10 @@ export class IPCHandlers {
   private windowManager: WindowManager;
   private vaultManager: VaultManager;
   private tabManager: TabManager;
+  private historyManager: HistoryManager;
+  private downloadManager: DownloadManager;
+  private extensionManager: ExtensionManager;
+  private findInPage: FindInPage;
   private handlers: Map<IPCChannel, HandlerRegistration> = new Map();
 
   /**
@@ -87,11 +125,22 @@ export class IPCHandlers {
    */
   private rateLimitMap: Map<string, number[]> = new Map();
 
-  constructor(windowManager: WindowManager, vaultManager: VaultManager, tabManager: TabManager) {
+  constructor(
+    windowManager: WindowManager,
+    vaultManager: VaultManager,
+    tabManager: TabManager,
+    historyManager: HistoryManager,
+    downloadManager: DownloadManager,
+    extensionManager: ExtensionManager,
+  ) {
     this.logger = LoggerFactory.create('IPCHandlers');
     this.windowManager = windowManager;
     this.vaultManager = vaultManager;
     this.tabManager = tabManager;
+    this.historyManager = historyManager;
+    this.downloadManager = downloadManager;
+    this.extensionManager = extensionManager;
+    this.findInPage = new FindInPage(tabManager);
   }
 
   /**
@@ -114,6 +163,24 @@ export class IPCHandlers {
 
     // Register tab management handlers
     this.registerTabHandlers();
+
+    // Register history handlers
+    this.registerHistoryHandlers();
+
+    // Register bookmark handlers
+    this.registerBookmarkHandlers();
+
+    // Register download handlers
+    this.registerDownloadHandlers();
+
+    // Register settings handlers
+    this.registerSettingsHandlers();
+
+    // Register find-in-page handlers
+    this.registerFindHandlers();
+
+    // Register extension handlers
+    this.registerExtensionHandlers();
 
     this.logger.info(`Registered ${this.handlers.size} IPC handlers`);
   }
@@ -262,14 +329,7 @@ export class IPCHandlers {
           window.setFullScreen(payload.fullscreen);
         }
       },
-      validator: (payload): payload is { fullscreen: boolean } => {
-        return (
-          typeof payload === 'object' &&
-          payload !== null &&
-          'fullscreen' in payload &&
-          typeof (payload as { fullscreen: unknown }).fullscreen === 'boolean'
-        );
-      },
+      validator: zodValidator(windowFullscreenSchema),
     });
   }
 
@@ -301,16 +361,7 @@ export class IPCHandlers {
         
         return result;
       },
-      validator: (payload): payload is { password: string; authLevel?: number } => {
-        return (
-          typeof payload === 'object' &&
-          payload !== null &&
-          'password' in payload &&
-          typeof (payload as { password: unknown }).password === 'string' &&
-          (!('authLevel' in payload) || 
-           typeof (payload as { authLevel: unknown }).authLevel === 'number')
-        );
-      },
+      validator: zodValidator(vaultInitializeSchema),
       rateLimit: {
         maxRequests: 3, // 3 attempts
         windowMs: 300000, // per 5 minutes
@@ -333,14 +384,7 @@ export class IPCHandlers {
         
         return result;
       },
-      validator: (payload): payload is { password: string } => {
-        return (
-          typeof payload === 'object' &&
-          payload !== null &&
-          'password' in payload &&
-          typeof (payload as { password: unknown }).password === 'string'
-        );
-      },
+      validator: zodValidator(vaultUnlockSchema),
       rateLimit: {
         maxRequests: 5, // 5 attempts
         windowMs: 60000, // per minute
@@ -405,14 +449,7 @@ export class IPCHandlers {
         this.logger.debug('Navigation requested', { url: payload.url });
         return this.tabManager.navigate(payload.url);
       },
-      validator: (payload): payload is { url: string } => {
-        return (
-          typeof payload === 'object' &&
-          payload !== null &&
-          'url' in payload &&
-          typeof (payload as { url: unknown }).url === 'string'
-        );
-      },
+      validator: zodValidator(navNavigateToSchema),
     });
   }
 
@@ -434,14 +471,7 @@ export class IPCHandlers {
       handler: async (_event, payload: { tabId: string }) => {
         return this.tabManager.closeTab(payload.tabId);
       },
-      validator: (payload): payload is { tabId: string } => {
-        return (
-          typeof payload === 'object' &&
-          payload !== null &&
-          'tabId' in payload &&
-          typeof (payload as { tabId: unknown }).tabId === 'string'
-        );
-      },
+      validator: zodValidator(tabCloseSchema),
     });
 
     this.register({
@@ -449,14 +479,7 @@ export class IPCHandlers {
       handler: async (_event, payload: { tabId: string }) => {
         return this.tabManager.switchTab(payload.tabId);
       },
-      validator: (payload): payload is { tabId: string } => {
-        return (
-          typeof payload === 'object' &&
-          payload !== null &&
-          'tabId' in payload &&
-          typeof (payload as { tabId: unknown }).tabId === 'string'
-        );
-      },
+      validator: zodValidator(tabSwitchSchema),
     });
 
     this.register({
@@ -474,22 +497,243 @@ export class IPCHandlers {
       handler: (_event, payload: { x: number; y: number; width: number; height: number }) => {
         this.tabManager.updateBounds(payload);
       },
-      validator: (payload): payload is { x: number; y: number; width: number; height: number } => {
-        return (
-          typeof payload === 'object' &&
-          payload !== null &&
-          typeof (payload as any).x === 'number' &&
-          typeof (payload as any).y === 'number' &&
-          typeof (payload as any).width === 'number' &&
-          typeof (payload as any).height === 'number'
-        );
+      validator: zodValidator(tabUpdateBoundsSchema),
+    });
+  }
+
+  // -- History --
+
+  private registerHistoryHandlers(): void {
+    this.register({
+      channel: IPCChannel.HISTORY_SEARCH,
+      handler: async (_event, payload: { query: string; limit?: number }) => {
+        return this.historyManager.search(payload.query, payload.limit);
+      },
+      validator: zodValidator(historySearchSchema),
+    });
+
+    this.register({
+      channel: IPCChannel.HISTORY_GET_RECENT,
+      handler: async (_event, payload: { limit?: number }) => {
+        return this.historyManager.getRecent(payload?.limit);
+      },
+    });
+
+    this.register({
+      channel: IPCChannel.HISTORY_DELETE,
+      handler: async (_event, payload: { id: number }) => {
+        this.historyManager.deleteEntry(payload.id);
+        return { success: true };
+      },
+      validator: zodValidator(historyDeleteSchema),
+    });
+
+    this.register({
+      channel: IPCChannel.HISTORY_CLEAR,
+      handler: async () => {
+        this.historyManager.clearAll();
+        return { success: true };
+      },
+    });
+  }
+
+  // -- Bookmarks --
+
+  private registerBookmarkHandlers(): void {
+    this.register({
+      channel: IPCChannel.BOOKMARK_CREATE,
+      handler: async (_event, payload: { parentId: number; title: string; url: string | null; isFolder?: boolean }) => {
+        const id = createBookmark(payload.parentId, payload.title, payload.url, payload.isFolder);
+        return { success: true, id };
+      },
+      validator: zodValidator(bookmarkCreateSchema),
+    });
+
+    this.register({
+      channel: IPCChannel.BOOKMARK_DELETE,
+      handler: async (_event, payload: { id: number }) => {
+        deleteBookmark(payload.id);
+        return { success: true };
+      },
+      validator: zodValidator(bookmarkDeleteSchema),
+    });
+
+    this.register({
+      channel: IPCChannel.BOOKMARK_UPDATE,
+      handler: async (_event, payload: { id: number; title?: string; url?: string }) => {
+        updateBookmark(payload.id, payload.title, payload.url);
+        return { success: true };
+      },
+      validator: zodValidator(bookmarkUpdateSchema),
+    });
+
+    this.register({
+      channel: IPCChannel.BOOKMARK_MOVE,
+      handler: async (_event, payload: { id: number; newParentId: number; newPosition: number }) => {
+        moveBookmark(payload.id, payload.newParentId, payload.newPosition);
+        return { success: true };
+      },
+      validator: zodValidator(bookmarkMoveSchema),
+    });
+
+    this.register({
+      channel: IPCChannel.BOOKMARK_GET_TREE,
+      handler: async (_event, payload: { rootId: number }) => {
+        return getBookmarkTree(payload.rootId);
+      },
+      validator: zodValidator(bookmarkGetTreeSchema),
+    });
+
+    this.register({
+      channel: IPCChannel.BOOKMARK_GET_CHILDREN,
+      handler: async (_event, payload: { parentId: number }) => {
+        return getChildren(payload.parentId);
+      },
+      validator: zodValidator(bookmarkGetChildrenSchema),
+    });
+
+    this.register({
+      channel: IPCChannel.BOOKMARK_IS_BOOKMARKED,
+      handler: async (_event, payload: { url: string }) => {
+        return isBookmarked(payload.url);
+      },
+      validator: zodValidator(bookmarkIsBookmarkedSchema),
+    });
+
+    this.register({
+      channel: IPCChannel.BOOKMARK_SEARCH,
+      handler: async (_event, payload: { query: string; limit?: number }) => {
+        return searchBookmarks(payload.query, payload.limit);
+      },
+      validator: zodValidator(bookmarkSearchSchema),
+    });
+  }
+
+  // -- Downloads --
+
+  private registerDownloadHandlers(): void {
+    this.register({
+      channel: IPCChannel.DOWNLOAD_GET_ALL,
+      handler: async () => this.downloadManager.getAllDownloads(),
+    });
+
+    this.register({
+      channel: IPCChannel.DOWNLOAD_PAUSE,
+      handler: async (_event, payload: { id: string }) => {
+        return { success: this.downloadManager.pause(payload.id) };
+      },
+      validator: zodValidator(downloadActionSchema),
+    });
+
+    this.register({
+      channel: IPCChannel.DOWNLOAD_RESUME,
+      handler: async (_event, payload: { id: string }) => {
+        return { success: this.downloadManager.resume(payload.id) };
+      },
+      validator: zodValidator(downloadActionSchema),
+    });
+
+    this.register({
+      channel: IPCChannel.DOWNLOAD_CANCEL,
+      handler: async (_event, payload: { id: string }) => {
+        return { success: this.downloadManager.cancel(payload.id) };
+      },
+      validator: zodValidator(downloadActionSchema),
+    });
+  }
+
+  // -- Settings --
+
+  private registerSettingsHandlers(): void {
+    this.register({
+      channel: IPCChannel.SETTINGS_GET,
+      handler: async (_event, payload: { key: string; defaultValue?: unknown }) => {
+        return getSetting(payload.key, payload.defaultValue ?? null);
+      },
+      validator: zodValidator(settingsGetSchema),
+    });
+
+    this.register({
+      channel: IPCChannel.SETTINGS_SET,
+      handler: async (_event, payload: { key: string; value: unknown }) => {
+        setSetting(payload.key, payload.value);
+        return { success: true };
+      },
+      validator: zodValidator(settingsSetSchema),
+    });
+
+    this.register({
+      channel: IPCChannel.SETTINGS_GET_ALL,
+      handler: async () => getAllSettings(),
+    });
+  }
+
+  // -- Find in Page --
+
+  private registerFindHandlers(): void {
+    this.register({
+      channel: IPCChannel.FIND_START,
+      handler: async (_event, payload: { text: string; forward?: boolean }) => {
+        return this.findInPage.find(payload.text, payload.forward);
+      },
+      validator: zodValidator(findStartSchema),
+    });
+
+    this.register({
+      channel: IPCChannel.FIND_NEXT,
+      handler: async () => this.findInPage.findNext(),
+    });
+
+    this.register({
+      channel: IPCChannel.FIND_PREVIOUS,
+      handler: async () => this.findInPage.findPrevious(),
+    });
+
+    this.register({
+      channel: IPCChannel.FIND_STOP,
+      handler: async () => {
+        this.findInPage.stop();
+        return { success: true };
+      },
+    });
+  }
+
+  // -- Extensions --
+
+  private registerExtensionHandlers(): void {
+    this.register({
+      channel: IPCChannel.EXTENSION_GET_ALL,
+      handler: async () => this.extensionManager.getAllExtensionInfo(),
+    });
+
+    this.register({
+      channel: IPCChannel.EXTENSION_TOGGLE,
+      handler: async (_event, payload: { id: string }) => {
+        const enabled = this.extensionManager.toggleExtension(payload.id);
+        return { success: true, enabled };
+      },
+    });
+
+    this.register({
+      channel: IPCChannel.EXTENSION_REMOVE,
+      handler: async (_event, payload: { id: string }) => {
+        const removed = await this.extensionManager.removeExtension(payload.id);
+        return { success: removed };
+      },
+    });
+
+    this.register({
+      channel: IPCChannel.EXTENSION_LOAD,
+      handler: async (_event, payload: { path: string }) => {
+        const ext = await this.extensionManager.loadExtension(payload.path);
+        return { success: !!ext, id: ext?.id };
       },
     });
   }
 
   /**
    * Send message from main to renderer
-   * 
+   *
    * Broadcasts events to all windows or specific window
    * 
    * @param channel - Event channel

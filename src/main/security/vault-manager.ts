@@ -39,7 +39,8 @@ interface VaultMetadataFile {
   created: number;
   lastUnlocked: number;
   authLevel: AuthenticationLevel;
-  kdfSalt: string;  // Base64-encoded salt
+  kdfSalt: string;           // Base64-encoded salt
+  verificationBlob: string;  // Base64-encoded HMAC verification blob
   kdfParams: {
     memoryCost: number;
     timeCost: number;
@@ -332,8 +333,19 @@ export class VaultManager {
           created: new Date(metadata.created).toISOString(),
         });
 
-        // Vault status is LOCKED after loading metadata
-        // (Core vault implementation handles this internally)
+        // Feed metadata into the Vault so it can verify keys on unlock
+        this.vault.loadMetadata({
+          version: metadata.version,
+          created: metadata.created,
+          lastUnlocked: metadata.lastUnlocked,
+          authLevel: metadata.authLevel,
+          kdfSalt: Buffer.from(metadata.kdfSalt, 'base64'),
+          kdfParams: {
+            algorithm: 'argon2id',
+            ...metadata.kdfParams,
+          },
+          verificationBlob: Buffer.from(metadata.verificationBlob, 'base64'),
+        });
       } else {
         this.logger.debug('No vault metadata found');
       }
@@ -348,19 +360,22 @@ export class VaultManager {
    */
   private async saveMetadata(): Promise<void> {
     try {
-      // Get metadata from vault
-      // TODO: Vault class needs to expose metadata getter
-      // For now, create basic metadata structure
+      const vaultMetadata = this.vault.getMetadata();
+      if (!vaultMetadata) {
+        throw new Error('No vault metadata available to save');
+      }
+
       const metadata: VaultMetadataFile = {
-        version: 1,
-        created: Date.now(),
-        lastUnlocked: Date.now(),
-        authLevel: this.vault.getAuthLevel() ?? AuthenticationLevel.BASIC,
-        kdfSalt: '', // TODO: Get from vault
+        version: vaultMetadata.version,
+        created: vaultMetadata.created,
+        lastUnlocked: vaultMetadata.lastUnlocked,
+        authLevel: vaultMetadata.authLevel,
+        kdfSalt: vaultMetadata.kdfSalt.toString('base64'),
+        verificationBlob: vaultMetadata.verificationBlob.toString('base64'),
         kdfParams: {
-          memoryCost: 32768,
-          timeCost: 4,
-          parallelism: 1,
+          memoryCost: vaultMetadata.kdfParams.memoryCost,
+          timeCost: vaultMetadata.kdfParams.timeCost,
+          parallelism: vaultMetadata.kdfParams.parallelism,
         },
       };
 

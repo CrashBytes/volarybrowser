@@ -255,3 +255,24 @@
 }
 
 .security-notice strong { color: #f57c00; }
+
+.btn-skip {
+  display: block;
+  width: 100%;
+  margin: 16px 0 0;
+  padding: 10px 16px;
+  background: #f0f0f0;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  color: #555;
+  font-size: 14px;
+  cursor: pointer;
+  text-align: center;
+  position: relative;
+  z-index: 10;
+}
+
+.btn-skip:hover {
+  background: #e0e0e0;
+  color: #333;
+}

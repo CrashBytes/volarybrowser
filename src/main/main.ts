@@ -31,6 +31,12 @@ import { TabManager } from './tab-manager';
 import { ExtensionManager } from './extensions/extension-manager';
 import { LoggerFactory, LogLevel } from './utils/logger';
 import { AppLifecycleState, ILogger } from './types';
+import { initDatabase, closeDatabase } from '../../core/storage/database';
+import { HistoryManager } from './history-manager';
+import { DownloadManager } from './download-manager';
+import { NetworkFilter } from './privacy/network-filter';
+import { PermissionHandler } from './permission-dialog';
+import { CrashRecovery } from './crash-recovery';
 
 /**
  * Application Controller
@@ -48,6 +54,11 @@ class VolaryBrowser {
   private vaultManager: VaultManager;
   private tabManager: TabManager;
   private extensionManager: ExtensionManager;
+  private historyManager: HistoryManager;
+  private downloadManager: DownloadManager;
+  private networkFilter: NetworkFilter;
+  private permissionHandler: PermissionHandler;
+  private crashRecovery: CrashRecovery;
   private ipcHandlers: IPCHandlers;
   private lifecycleState: AppLifecycleState = AppLifecycleState.INITIALIZING;
 
@@ -57,6 +68,16 @@ class VolaryBrowser {
   private isShuttingDown: boolean = false;
 
   constructor() {
+    // Set app name before anything else (macOS menu bar, Dock)
+    app.setName('Volary Browser');
+    if (process.platform === 'darwin') {
+      // This helps with About panel but macOS menu bar requires the packaged app's Info.plist
+      app.setAboutPanelOptions({
+        applicationName: 'Volary Browser',
+        applicationVersion: '0.2.0-alpha',
+      });
+    }
+
     // Initialize configuration system FIRST (required by all subsystems)
     config.initialize();
     
@@ -76,7 +97,15 @@ class VolaryBrowser {
     this.vaultManager = new VaultManager();
     this.tabManager = new TabManager();
     this.extensionManager = new ExtensionManager();
-    this.ipcHandlers = new IPCHandlers(this.windowManager, this.vaultManager, this.tabManager);
+    this.historyManager = new HistoryManager();
+    this.downloadManager = new DownloadManager();
+    this.networkFilter = new NetworkFilter();
+    this.permissionHandler = new PermissionHandler();
+    this.crashRecovery = new CrashRecovery();
+    this.ipcHandlers = new IPCHandlers(
+      this.windowManager, this.vaultManager, this.tabManager,
+      this.historyManager, this.downloadManager, this.extensionManager
+    );
 
     // Configure application behavior
     this.configureApplicationDefaults();
@@ -185,10 +214,9 @@ class VolaryBrowser {
         exitCode: details.exitCode,
       });
 
-      // TODO: Implement crash recovery
-      // - Show error dialog to user
-      // - Offer to restart or send crash report
-      // - Save current state before recovery
+      // Save tab state so it can be restored after restart
+      const tabs = this.tabManager.getAllTabStates();
+      this.crashRecovery.saveTabs(tabs);
     });
 
     // Child process crash - log for diagnostics
@@ -225,7 +253,16 @@ class VolaryBrowser {
         userDataPath: config.app.userDataPath,
       });
 
-      // Configure security policies
+      // Initialize database (required by vault, window state, and settings)
+      initDatabase(config.app.userDataPath);
+      this.logger.debug('Database initialized');
+
+      // Initialize privacy/security systems
+      this.networkFilter.initialize();
+      this.permissionHandler.initialize();
+      this.logger.debug('Privacy systems initialized');
+
+      // Configure security policies (CSP for our UI)
       await this.configureSecurityPolicies();
 
       // Initialize IPC communication layer
@@ -240,8 +277,31 @@ class VolaryBrowser {
       const mainWindow = this.windowManager.getMainWindow();
       if (mainWindow) {
         this.tabManager.setWindow(mainWindow);
-        await this.tabManager.createTab({ active: true });
-        this.logger.debug('Tab manager initialized with initial tab');
+        this.tabManager.onNavigate((url, title) => {
+          this.historyManager.recordVisit(url, title);
+          this.networkFilter.resetCount();
+          // Persist tab state for crash recovery
+          const tabs = this.tabManager.getAllTabStates();
+          this.crashRecovery.saveTabs(tabs);
+        });
+        this.networkFilter.onBlockedCountUpdate((count, urls) => {
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('privacy:blocked-count', { count, urls });
+          }
+        });
+        this.downloadManager.initialize(mainWindow);
+        // Restore tabs from previous session (crash recovery)
+        const savedTabs = this.crashRecovery.getSavedTabs();
+        if (savedTabs.length > 0) {
+          this.logger.info('Restoring tabs from previous session', { count: savedTabs.length });
+          for (const saved of savedTabs) {
+            await this.tabManager.createTab({ url: saved.url, active: saved.isActive });
+          }
+          this.crashRecovery.clearSavedTabs();
+        } else {
+          await this.tabManager.createTab({ active: true });
+        }
+        this.logger.debug('Tab manager initialized');
       }
 
       // Initialize vault manager (encrypted storage)
@@ -278,14 +338,24 @@ class VolaryBrowser {
 
     const defaultSession = session.defaultSession;
 
-    // Set Content Security Policy
+    // Set Content Security Policy — only for the renderer chrome, not tab content.
+    // Tab BrowserViews load web pages that define their own CSP.
+    // We only enforce CSP on our own renderer UI (loaded from file:// or localhost).
     defaultSession.webRequest.onHeadersReceived((details, callback) => {
-      callback({
-        responseHeaders: {
-          ...details.responseHeaders,
-          'Content-Security-Policy': [config.security.contentSecurityPolicy],
-        },
-      });
+      const isOurUI = details.url.startsWith('file://') ||
+        details.url.startsWith('http://localhost');
+
+      if (isOurUI) {
+        callback({
+          responseHeaders: {
+            ...details.responseHeaders,
+            'Content-Security-Policy': [config.security.contentSecurityPolicy],
+          },
+        });
+      } else {
+        // Pass through web content CSP headers unmodified
+        callback({ responseHeaders: details.responseHeaders });
+      }
     });
 
     // Certificate validation (enforce HTTPS)
@@ -301,19 +371,7 @@ class VolaryBrowser {
       callback(-3);
     });
 
-    // Permission request handler
-    defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
-      this.logger.debug('Permission requested', {
-        permission,
-        url: webContents.getURL(),
-      });
-
-      // TODO: Implement user-facing permission dialog
-      // For now, deny all permissions except safe ones
-      const allowedPermissions = ['notifications'];
-      
-      callback(allowedPermissions.includes(permission));
-    });
+    // Permission handling is done by PermissionHandler (initialized earlier)
 
     // Future: WebRequest filtering for ad/tracker blocking
     // defaultSession.webRequest.onBeforeRequest((details, callback) => {
@@ -390,6 +448,13 @@ class VolaryBrowser {
       // Lock vault and cleanup
       this.vaultManager.lock();
       this.logger.debug('Vault locked');
+
+      // Clear crash recovery state (clean shutdown)
+      this.crashRecovery.clearSavedTabs();
+
+      // Close database connection
+      closeDatabase();
+      this.logger.debug('Database closed');
 
       this.logger.info('Graceful shutdown complete');
     } catch (error) {

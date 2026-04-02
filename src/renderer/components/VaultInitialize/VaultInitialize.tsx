@@ -8,6 +8,7 @@ import './VaultInitialize.css';
 interface VaultInitializeProps {
   onSuccess: () => void;
   onCancel?: () => void;
+  onSkip?: () => void;
 }
 
 enum PasswordStrength {
@@ -20,6 +21,7 @@ enum PasswordStrength {
 export const VaultInitialize: React.FC<VaultInitializeProps> = ({
   onSuccess,
   onCancel,
+  onSkip,
 }) => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -111,6 +113,11 @@ export const VaultInitialize: React.FC<VaultInitializeProps> = ({
             Your vault encrypts all browsing history and sensitive data.
             Choose a strong master password - you'll need it to unlock Volary.
           </p>
+          {onSkip && (
+            <button type="button" className="btn-skip" onClick={onSkip}>
+              Skip for now — browse without encryption
+            </button>
+          )}
         </div>
 
         <form className="vault-form" onSubmit={handleSubmit}>

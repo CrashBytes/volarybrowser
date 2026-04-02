@@ -131,6 +131,45 @@ export enum IPCChannel {
   TAB_GET_ALL = 'tab:get-all',
   TAB_UPDATE_BOUNDS = 'tab:update-bounds',
   
+  // History
+  HISTORY_SEARCH = 'history:search',
+  HISTORY_GET_RECENT = 'history:get-recent',
+  HISTORY_DELETE = 'history:delete',
+  HISTORY_CLEAR = 'history:clear',
+
+  // Bookmarks
+  BOOKMARK_CREATE = 'bookmark:create',
+  BOOKMARK_DELETE = 'bookmark:delete',
+  BOOKMARK_UPDATE = 'bookmark:update',
+  BOOKMARK_MOVE = 'bookmark:move',
+  BOOKMARK_GET_TREE = 'bookmark:get-tree',
+  BOOKMARK_GET_CHILDREN = 'bookmark:get-children',
+  BOOKMARK_IS_BOOKMARKED = 'bookmark:is-bookmarked',
+  BOOKMARK_SEARCH = 'bookmark:search',
+
+  // Downloads
+  DOWNLOAD_GET_ALL = 'download:get-all',
+  DOWNLOAD_PAUSE = 'download:pause',
+  DOWNLOAD_RESUME = 'download:resume',
+  DOWNLOAD_CANCEL = 'download:cancel',
+
+  // Settings
+  SETTINGS_GET = 'settings:get',
+  SETTINGS_SET = 'settings:set',
+  SETTINGS_GET_ALL = 'settings:get-all',
+
+  // Find in page
+  FIND_START = 'find:start',
+  FIND_NEXT = 'find:next',
+  FIND_PREVIOUS = 'find:previous',
+  FIND_STOP = 'find:stop',
+
+  // Extensions
+  EXTENSION_GET_ALL = 'extension:get-all',
+  EXTENSION_TOGGLE = 'extension:toggle',
+  EXTENSION_REMOVE = 'extension:remove',
+  EXTENSION_LOAD = 'extension:load',
+
   // Workspace management
   WORKSPACE_CREATE = 'workspace:create',
   WORKSPACE_SWITCH = 'workspace:switch',

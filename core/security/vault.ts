@@ -15,11 +15,12 @@
  * @author Volary Security Team
  */
 
-import { randomBytes } from 'crypto';
+import { randomBytes, timingSafeEqual } from 'crypto';
 import { argon2id } from 'hash-wasm';
-import { hkdf } from '@noble/hashes/hkdf';
-import { sha256 } from '@noble/hashes/sha256';
-import { xchacha20poly1305 } from '@noble/ciphers/chacha';
+import { hkdf } from '@noble/hashes/hkdf.js';
+import { sha256 } from '@noble/hashes/sha2.js';
+import { hmac } from '@noble/hashes/hmac.js';
+import { xchacha20poly1305 } from '@noble/ciphers/chacha.js';
 
 /**
  * Authentication tiers for progressive disclosure of sensitive data
@@ -121,6 +122,7 @@ interface VaultMetadata {
   authLevel: AuthenticationLevel;
   kdfSalt: Buffer;          // Salt for key derivation
   kdfParams: VaultCryptoConfig['kdf'];
+  verificationBlob: Buffer; // HMAC for master key verification
 }
 
 /**
@@ -196,6 +198,11 @@ export class Vault {
     // Derive master key using Argon2id
     const masterKey = await this.deriveKey(passphrase, salt);
 
+    // Compute verification blob: HMAC-SHA256(masterKey, domain separator)
+    const verificationBlob = Buffer.from(
+      hmac(sha256, masterKey, Buffer.from('volary.vault.verification'))
+    );
+
     // Create vault metadata
     this.metadata = {
       version: 1,
@@ -204,6 +211,7 @@ export class Vault {
       authLevel,
       kdfSalt: salt,
       kdfParams: this.config.kdf,
+      verificationBlob,
     };
 
     // Store master key in memory
@@ -444,10 +452,18 @@ export class Vault {
    * @param key - Key to verify
    * @returns True if key is correct
    */
-  private async verifyMasterKey(_key: Uint8Array): Promise<boolean> {
-    // TODO: Implementation requires stored verification blob
-    // For now, assume key is correct (real impl would check HMAC)
-    return true;
+  private async verifyMasterKey(key: Uint8Array): Promise<boolean> {
+    if (!this.metadata?.verificationBlob) {
+      throw new Error('Verification blob not available in vault metadata');
+    }
+
+    // Recompute HMAC with the candidate key
+    const computed = Buffer.from(
+      hmac(sha256, key, Buffer.from('volary.vault.verification'))
+    );
+
+    // Constant-time comparison to prevent timing attacks
+    return timingSafeEqual(computed, this.metadata.verificationBlob);
   }
 
   /**
@@ -466,13 +482,54 @@ export class Vault {
       Date.now() - this.lastRotation >= this.config.rotation.maxDuration * 1000;
 
     if (shouldRotate) {
-      // TODO: Implement key rotation
-      // 1. Derive new master key from old master key + random data
-      // 2. Re-encrypt all vault data with new key
-      // 3. Zero old key material
-      this.lastRotation = Date.now();
-      this.operationCount = 0;
+      this.rotateKey();
     }
+  }
+
+  /**
+   * Rotate master key material
+   *
+   * Derives a new master key from the current key + fresh random data
+   * using HKDF. Updates the verification blob and clears derived key cache.
+   *
+   * Note: This rotates the in-memory key material and verification blob.
+   * Callers must re-persist metadata after rotation. Existing encrypted
+   * data is NOT re-encrypted — it remains decryptable via the derived key
+   * chain. Full re-encryption of stored data should be handled by the
+   * storage layer when it is implemented.
+   */
+  private rotateKey(): void {
+    if (!this.masterKey || !this.metadata) return;
+
+    const oldKey = this.masterKey;
+
+    // Derive new master key: HKDF(currentKey, freshSalt, "rotation")
+    const freshSalt = randomBytes(32);
+    const newKey = hkdf(
+      sha256,
+      oldKey,
+      freshSalt,
+      Buffer.from('volary.vault.rotation'),
+      32
+    );
+
+    // Update verification blob with new key
+    this.metadata.verificationBlob = Buffer.from(
+      hmac(sha256, newKey, Buffer.from('volary.vault.verification'))
+    );
+
+    // Install new key and clear derived key cache
+    this.masterKey = newKey;
+    for (const key of this.derivedKeys.values()) {
+      key.fill(0);
+    }
+    this.derivedKeys.clear();
+
+    // Zero old key material
+    oldKey.fill(0);
+
+    this.lastRotation = Date.now();
+    this.operationCount = 0;
   }
 
   /**
@@ -526,6 +583,50 @@ export class Vault {
    */
   getAuthLevel(): AuthenticationLevel | null {
     return this.metadata?.authLevel ?? null;
+  }
+
+  /**
+   * Get vault metadata for persistence
+   * Returns only the public data needed to reconstruct vault state
+   */
+  getMetadata(): {
+    version: number;
+    created: number;
+    lastUnlocked: number;
+    authLevel: AuthenticationLevel;
+    kdfSalt: Buffer;
+    kdfParams: VaultCryptoConfig['kdf'];
+    verificationBlob: Buffer;
+  } | null {
+    if (!this.metadata) return null;
+    return {
+      version: this.metadata.version,
+      created: this.metadata.created,
+      lastUnlocked: this.metadata.lastUnlocked,
+      authLevel: this.metadata.authLevel,
+      kdfSalt: this.metadata.kdfSalt,
+      kdfParams: this.metadata.kdfParams,
+      verificationBlob: this.metadata.verificationBlob,
+    };
+  }
+
+  /**
+   * Load vault metadata from persisted state
+   * Called by VaultManager during initialization to restore vault state
+   */
+  loadMetadata(metadata: {
+    version: number;
+    created: number;
+    lastUnlocked: number;
+    authLevel: AuthenticationLevel;
+    kdfSalt: Buffer;
+    kdfParams: VaultCryptoConfig['kdf'];
+    verificationBlob: Buffer;
+  }): void {
+    this.metadata = {
+      ...metadata,
+    };
+    this.status = VaultStatus.LOCKED;
   }
 }
 

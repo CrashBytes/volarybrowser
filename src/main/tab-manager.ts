@@ -17,6 +17,8 @@ import { BrowserView, BrowserWindow } from 'electron';
 import { randomUUID } from 'crypto';
 import { TabState, TabCreateOptions, TabResult, TabUpdateEvent, ILogger } from './types';
 import { LoggerFactory } from './utils/logger';
+import { validateAndNormalizeUrl } from './utils/url-validator';
+import { attachContextMenu } from './context-menu';
 import type { ContentScriptInjector } from './extensions/content-script-injector';
 
 interface ManagedTab {
@@ -31,9 +33,17 @@ export class TabManager {
   private window: BrowserWindow | null = null;
   private viewBounds: Electron.Rectangle = { x: 0, y: 88, width: 1280, height: 680 };
   private contentScriptInjector: ContentScriptInjector | null = null;
+  private onNavigateCallback: ((url: string, title: string) => void) | null = null;
 
   constructor() {
     this.logger = LoggerFactory.create('TabManager');
+  }
+
+  /**
+   * Register a callback for navigation events (used by HistoryManager)
+   */
+  onNavigate(callback: (url: string, title: string) => void): void {
+    this.onNavigateCallback = callback;
   }
 
   /**
@@ -65,7 +75,7 @@ export class TabManager {
     }
 
     const tabId = randomUUID();
-    const url = options.url || '';
+    const url = options.url ? validateAndNormalizeUrl(options.url).url : '';
 
     const view = new BrowserView({
       webPreferences: {
@@ -90,6 +100,7 @@ export class TabManager {
 
     this.tabs.set(tabId, { view, state });
     this.attachWebContentsListeners(tabId, view);
+    attachContextMenu(view, this);
 
     // Activate this tab if requested (default: yes)
     if (options.active !== false) {
@@ -221,11 +232,13 @@ export class TabManager {
     }
   }
 
-  async navigate(url: string): Promise<TabResult> {
+  async navigate(rawInput: string): Promise<TabResult> {
     const tab = this.getActiveTab();
     if (!tab) {
       return { success: false, message: 'No active tab' };
     }
+
+    const { url } = validateAndNormalizeUrl(rawInput);
 
     try {
       await tab.view.webContents.loadURL(url);
@@ -285,6 +298,12 @@ export class TabManager {
         canGoBack: wc.canGoBack(),
         canGoForward: wc.canGoForward(),
       });
+
+      // Record history visit
+      if (this.onNavigateCallback) {
+        const title = wc.getTitle() || '';
+        this.onNavigateCallback(url, title);
+      }
 
       // Inject content scripts for matching extensions
       if (this.contentScriptInjector) {

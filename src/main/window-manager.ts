@@ -25,6 +25,10 @@ import {
 } from './types';
 import { LoggerFactory } from './utils/logger';
 import { config } from './config';
+import {
+  saveWindowState as dbSaveWindowState,
+  loadWindowState as dbLoadWindowState,
+} from '../../core/storage/repositories/window-state';
 
 /**
  * Default window state for first launch
@@ -84,13 +88,18 @@ export class WindowManager implements IWindowManager {
     const normalizedState = this.normalizeWindowState(state);
 
     // Merge configuration with persisted state
-    const browserWindowConfig = {
+    const browserWindowConfig: Electron.BrowserWindowConstructorOptions = {
       ...windowConfig,
       width: normalizedState.width,
       height: normalizedState.height,
       x: normalizedState.x,
       y: normalizedState.y,
       show: false, // Use 'ready-to-show' event for flicker-free display
+      // macOS: hide native title bar but keep traffic lights integrated
+      ...(process.platform === 'darwin' ? {
+        titleBarStyle: 'hiddenInset' as const,
+        trafficLightPosition: { x: 12, y: 12 },
+      } : {}),
     };
 
     // Create window instance
@@ -108,7 +117,17 @@ export class WindowManager implements IWindowManager {
     window.once('ready-to-show', () => {
       this.logger.debug('Window ready to show');
       window.show();
+      window.focus();
     });
+
+    // Fallback: force show after 3 seconds if ready-to-show hasn't fired
+    setTimeout(() => {
+      if (!window.isDestroyed() && !window.isVisible()) {
+        this.logger.warn('ready-to-show did not fire, forcing window show');
+        window.show();
+        window.focus();
+      }
+    }, 3000);
 
     // Register window in tracking set
     this.windows.add(window);
@@ -153,7 +172,7 @@ export class WindowManager implements IWindowManager {
       // Open DevTools in development
       window.webContents.openDevTools();
     } else {
-      const htmlPath = path.join(__dirname, '../renderer/index.html');
+      const htmlPath = path.join(__dirname, 'index.html');
       this.logger.debug(`Loading production HTML: ${htmlPath}`);
       window.loadFile(htmlPath);
     }
@@ -217,11 +236,29 @@ export class WindowManager implements IWindowManager {
     // Security: Prevents phishing attacks via window.location manipulation
     window.webContents.on('will-navigate', (event, url) => {
       const allowedOrigins = config.security.allowedOrigins;
-      const urlObj = new URL(url);
-      
-      if (!allowedOrigins.includes(urlObj.origin)) {
-        this.logger.warn('Blocked navigation to unauthorized origin', { url });
+
+      // Allow file:// protocol (production loads from local files)
+      try {
+        const urlObj = new URL(url);
+        if (urlObj.protocol === 'file:') return;
+        if (allowedOrigins.length > 0 && !allowedOrigins.includes(urlObj.origin)) {
+          this.logger.warn('Blocked navigation to unauthorized origin', { url });
+          event.preventDefault();
+        }
+      } catch {
+        // Malformed URL — block it
         event.preventDefault();
+      }
+    });
+
+    // Log renderer console messages and load failures
+    window.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
+      this.logger.error('Page failed to load', undefined, { errorCode, errorDescription, validatedURL });
+    });
+
+    window.webContents.on('console-message', (_event, level, message) => {
+      if (level >= 2) { // warnings and errors
+        this.logger.warn(`[Renderer] ${message}`);
       }
     });
 
@@ -257,9 +294,17 @@ export class WindowManager implements IWindowManager {
 
     this.logger.debug('Saving window state', state);
 
-    // TODO: Implement encrypted state persistence via vault
-    // For now, store in memory (state lost on restart)
-    // Future: Store in encrypted JSON file or SQLCipher database
+    try {
+      dbSaveWindowState({
+        x: state.x ?? 0,
+        y: state.y ?? 0,
+        width: state.width,
+        height: state.height,
+        isMaximized: state.isMaximized,
+      });
+    } catch (error) {
+      this.logger.error('Failed to save window state', error as Error);
+    }
   }
 
   /**
@@ -269,20 +314,29 @@ export class WindowManager implements IWindowManager {
    */
   public async loadWindowState(): Promise<WindowState> {
     this.logger.debug('Loading window state');
-
-    // TODO: Implement encrypted state retrieval from vault
-    // For now, return default state
-    return DEFAULT_WINDOW_STATE;
+    return this.loadWindowStateSync();
   }
 
   /**
    * Synchronous state loading for window creation
-   * 
-   * Window creation cannot be async, so we need sync state loading
-   * Future: Pre-load state during app initialization
+   * Uses better-sqlite3 which supports synchronous queries
    */
   private loadWindowStateSync(): WindowState {
-    // TODO: Implement synchronous state loading
+    try {
+      const saved = dbLoadWindowState();
+      if (saved) {
+        return {
+          width: saved.width,
+          height: saved.height,
+          x: saved.x,
+          y: saved.y,
+          isMaximized: saved.isMaximized,
+          isFullScreen: false,
+        };
+      }
+    } catch (error) {
+      this.logger.error('Failed to load window state', error as Error);
+    }
     return DEFAULT_WINDOW_STATE;
   }
 

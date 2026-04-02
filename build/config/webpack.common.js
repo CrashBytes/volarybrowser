@@ -37,6 +37,10 @@ module.exports = {
           options: {
             transpileOnly: true, // Speed up compilation, type-checking in separate process
             experimentalWatchApi: true,
+            ignoreDiagnostics: [5011], // TS5011: rootDir inference - irrelevant when bundling with webpack
+            compilerOptions: {
+              rootDir: rootDir,
+            },
           },
         },
         exclude: /node_modules/,

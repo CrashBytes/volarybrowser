@@ -235,8 +235,125 @@ const api = {
   },
 
   /**
+   * History API
+   */
+  history: {
+    search: async (query: string, limit?: number) => {
+      return ipcRenderer.invoke('history:search', { query, limit });
+    },
+    getRecent: async (limit?: number) => {
+      return ipcRenderer.invoke('history:get-recent', { limit });
+    },
+    delete: async (id: number) => {
+      return ipcRenderer.invoke('history:delete', { id });
+    },
+    clear: async () => {
+      return ipcRenderer.invoke('history:clear');
+    },
+  },
+
+  /**
+   * Bookmarks API
+   */
+  bookmarks: {
+    create: async (parentId: number, title: string, url: string | null, isFolder?: boolean) => {
+      return ipcRenderer.invoke('bookmark:create', { parentId, title, url, isFolder });
+    },
+    delete: async (id: number) => {
+      return ipcRenderer.invoke('bookmark:delete', { id });
+    },
+    update: async (id: number, title?: string, url?: string) => {
+      return ipcRenderer.invoke('bookmark:update', { id, title, url });
+    },
+    move: async (id: number, newParentId: number, newPosition: number) => {
+      return ipcRenderer.invoke('bookmark:move', { id, newParentId, newPosition });
+    },
+    getTree: async (rootId: number) => {
+      return ipcRenderer.invoke('bookmark:get-tree', { rootId });
+    },
+    getChildren: async (parentId: number) => {
+      return ipcRenderer.invoke('bookmark:get-children', { parentId });
+    },
+    isBookmarked: async (url: string) => {
+      return ipcRenderer.invoke('bookmark:is-bookmarked', { url });
+    },
+    search: async (query: string, limit?: number) => {
+      return ipcRenderer.invoke('bookmark:search', { query, limit });
+    },
+  },
+
+  /**
+   * Downloads API
+   */
+  downloads: {
+    getAll: async () => {
+      return ipcRenderer.invoke('download:get-all');
+    },
+    pause: async (id: string) => {
+      return ipcRenderer.invoke('download:pause', { id });
+    },
+    resume: async (id: string) => {
+      return ipcRenderer.invoke('download:resume', { id });
+    },
+    cancel: async (id: string) => {
+      return ipcRenderer.invoke('download:cancel', { id });
+    },
+  },
+
+  /**
+   * Settings API
+   */
+  settings: {
+    get: async (key: string, defaultValue?: unknown) => {
+      return ipcRenderer.invoke('settings:get', { key, defaultValue });
+    },
+    set: async (key: string, value: unknown) => {
+      return ipcRenderer.invoke('settings:set', { key, value });
+    },
+    getAll: async () => {
+      return ipcRenderer.invoke('settings:get-all');
+    },
+  },
+
+  /**
+   * Find in Page API
+   */
+  find: {
+    start: async (text: string, forward?: boolean) => {
+      return ipcRenderer.invoke('find:start', { text, forward });
+    },
+    next: async () => {
+      return ipcRenderer.invoke('find:next');
+    },
+    previous: async () => {
+      return ipcRenderer.invoke('find:previous');
+    },
+    stop: async () => {
+      return ipcRenderer.invoke('find:stop');
+    },
+  },
+
+  /**
+   * Extensions API
+   */
+  extensions: {
+    getAll: async () => {
+      return ipcRenderer.invoke('extension:get-all');
+    },
+    toggle: async (id: string) => {
+      return ipcRenderer.invoke('extension:toggle', { id });
+    },
+    remove: async (id: string) => {
+      return ipcRenderer.invoke('extension:remove', { id });
+    },
+    load: async (extensionPath: string) => {
+      return ipcRenderer.invoke('extension:load', { path: extensionPath });
+    },
+  },
+
+  /**
    * Workspace Management API
-   * 
+   *
    * Context isolation and workspace switching (placeholder for future implementation)
    */
   workspaces: {
@@ -284,6 +401,9 @@ const api = {
       'tab:updated',
       'workspace:changed',
       'navigation:completed',
+      'download:updated',
+      'find:result',
+      'privacy:blocked-count',
     ];
 
     if (!allowedChannels.includes(channel)) {

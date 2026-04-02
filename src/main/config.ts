@@ -23,7 +23,7 @@ import { AppConfig, WindowConfig, SecurityConfig } from './types';
  * 3. Default to production (fail-safe)
  */
 const isDevelopment = (): boolean => {
-  return process.env.NODE_ENV === 'development' || !app.isPackaged;
+  return process.env.NODE_ENV === 'development';
 };
 
 /**
@@ -104,7 +104,7 @@ class Configuration {
       height: 800,
       minWidth: 800,
       minHeight: 600,
-      frame: !isDevelopment(), // Frameless in production for custom chrome
+      frame: false, // Frameless — custom chrome handles window controls
       transparent: false,
       backgroundColor: '#1a1a1a', // Dark mode default
       title: 'Volary Browser',

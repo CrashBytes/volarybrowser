@@ -131,6 +131,64 @@ export class ExtensionManager {
     return this.contentScriptInjector;
   }
 
+  /**
+   * Enable or disable an extension
+   */
+  toggleExtension(id: string): boolean {
+    const ext = this.extensions.get(id);
+    if (!ext) return false;
+    ext.enabled = !ext.enabled;
+    if (ext.enabled) {
+      this.contentScriptInjector.registerExtension(ext);
+    } else {
+      this.contentScriptInjector.unregisterExtension(id);
+    }
+    this.logger.info('Extension toggled', { id, enabled: ext.enabled });
+    return ext.enabled;
+  }
+
+  /**
+   * Remove an extension
+   */
+  async removeExtension(id: string): Promise<boolean> {
+    const ext = this.extensions.get(id);
+    if (!ext) return false;
+
+    this.contentScriptInjector.unregisterExtension(id);
+    this.permissionManager.revokePermissions(id);
+    this.extensions.delete(id);
+
+    // Delete extension directory
+    try {
+      const { promises: fs } = require('fs');
+      await fs.rm(ext.path, { recursive: true, force: true });
+    } catch (error) {
+      this.logger.error('Failed to delete extension directory', error as Error);
+    }
+
+    this.logger.info('Extension removed', { id, name: ext.manifest.name });
+    return true;
+  }
+
+  /**
+   * Get serializable info about all extensions (for renderer)
+   */
+  getAllExtensionInfo(): Array<{
+    id: string;
+    name: string;
+    version: string;
+    description: string;
+    enabled: boolean;
+  }> {
+    return Array.from(this.extensions.values()).map(ext => ({
+      id: ext.id,
+      name: ext.manifest.name,
+      version: ext.manifest.version,
+      description: ext.manifest.description || '',
+      enabled: ext.enabled,
+    }));
+  }
+
   private generateExtensionId(extensionPath: string): string {
     return createHash('sha256').update(extensionPath).digest('hex').slice(0, 32);
   }
