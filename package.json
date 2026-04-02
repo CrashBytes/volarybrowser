@@ -1,6 +1,6 @@
 {
   "name": "volary-browser",
-  "version": "0.1.0-alpha",
+  "version": "0.2.0-alpha",
   "description": "Security-first, context-aware web browser built on Chromium",
   "main": "dist/main.js",
   "scripts": {
@@ -13,6 +13,11 @@
     "start": "electron dist/main.js",
     "start:prod": "npm run build:standalone && electron dist/main.js",
     "build:standalone": "NODE_ENV=production webpack --config build/config/webpack.main.config.js --mode production && NODE_ENV=production webpack --config build/config/webpack.preload.config.js --mode production && NODE_ENV=production webpack --config build/config/webpack.renderer.config.js --mode production",
+    "pack": "npm run build:standalone && electron-builder --dir",
+    "dist": "npm run build:standalone && electron-builder",
+    "dist:mac": "npm run build:standalone && electron-builder --mac",
+    "dist:win": "npm run build:standalone && electron-builder --win",
+    "dist:linux": "npm run build:standalone && electron-builder --linux",
     "test": "vitest run",
     "test:unit": "vitest run --dir __tests__/unit",
     "test:integration": "vitest run --dir __tests__/integration",
@@ -106,14 +111,23 @@
     },
     "files": [
       "dist/**/*",
-      "node_modules/**/*",
+      "node_modules/better-sqlite3/**/*",
+      "node_modules/bindings/**/*",
+      "node_modules/file-uri-to-path/**/*",
+      "node_modules/prebuild-install/**/*",
       "package.json"
     ],
+    "asar": true,
+    "publish": {
+      "provider": "github",
+      "owner": "volary",
+      "repo": "browser"
+    },
     "mac": {
       "category": "public.app-category.productivity",
       "target": [
-        "dmg",
-        "zip"
+        { "target": "dmg", "arch": ["x64", "arm64"] },
+        { "target": "zip", "arch": ["x64", "arm64"] }
       ],
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
@@ -122,18 +136,20 @@
     },
     "win": {
       "target": [
-        "nsis",
-        "portable"
+        "nsis"
       ],
       "signingHashAlgorithms": [
         "sha256"
       ]
     },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
     "linux": {
       "target": [
         "AppImage",
-        "deb",
-        "rpm"
+        "deb"
       ],
       "category": "Network",
       "maintainer": "security@volarybrowser.com"
