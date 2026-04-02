@@ -47,9 +47,11 @@ export const App: React.FC = () => {
   // Derive active tab
   const activeTab = tabs.find((t) => t.id === activeTabId) || null;
 
-  // Whether a modal or panel overlay is blocking the content area
+  // Whether the BrowserView should be hidden (modal, panel, or new tab page)
   const isModalOpen = (!vaultStatus.isLoading && !vaultStatus.skipped &&
-    (!vaultStatus.hasVault || !vaultStatus.isUnlocked)) || showBlockedPanel;
+    (!vaultStatus.hasVault || !vaultStatus.isUnlocked))
+    || showBlockedPanel
+    || (activeTab != null && !activeTab.url);
 
   /**
    * Report chrome bounds to main process
