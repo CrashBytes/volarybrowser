@@ -10,19 +10,35 @@
 import { Menu, app, BrowserWindow, shell, dialog } from 'electron';
 import { TabManager } from './tab-manager';
 import { saveSession, listSessions, getSession } from '../../core/storage/repositories/sessions';
+import { getRecentHistory } from '../../core/storage/repositories/history';
 import { ILogger } from './types';
 import { LoggerFactory } from './utils/logger';
+
+export interface MenuConfig {
+  historyEnabled: boolean;
+}
 
 export class AppMenu {
   private logger: ILogger;
   private tabManager: TabManager;
+  private mainWindow: BrowserWindow | null = null;
+  private config: MenuConfig = { historyEnabled: true };
 
   constructor(tabManager: TabManager) {
     this.logger = LoggerFactory.create('AppMenu');
     this.tabManager = tabManager;
   }
 
+  /**
+   * Update menu config and rebuild
+   */
+  updateConfig(config: Partial<MenuConfig>): void {
+    Object.assign(this.config, config);
+    if (this.mainWindow) this.build(this.mainWindow);
+  }
+
   build(mainWindow: BrowserWindow): void {
+    this.mainWindow = mainWindow;
     const isMac = process.platform === 'darwin';
     const send = (channel: string, ...args: unknown[]) => {
       if (mainWindow && !mainWindow.isDestroyed()) {
@@ -235,6 +251,52 @@ export class AppMenu {
           },
         ],
       },
+
+      // History (only when enabled)
+      ...(this.config.historyEnabled ? [{
+        label: 'History',
+        submenu: [
+          {
+            label: 'Show All History',
+            accelerator: 'CmdOrCtrl+Y',
+            click: () => send('open-settings', 'privacy'),
+          },
+          { type: 'separator' as const },
+          ...(() => {
+            try {
+              const recent = getRecentHistory(10);
+              if (recent.length === 0) return [{ label: 'No history yet', enabled: false }];
+              return recent.map((entry: any) => {
+                const domain = (() => { try { return new URL(entry.url).hostname; } catch { return entry.url; } })();
+                const label = entry.title ? `${entry.title.slice(0, 40)} — ${domain}` : domain;
+                return {
+                  label,
+                  click: () => this.tabManager.navigate(entry.url),
+                };
+              });
+            } catch {
+              return [{ label: 'No history yet', enabled: false }];
+            }
+          })(),
+          { type: 'separator' as const },
+          {
+            label: 'Clear History',
+            click: async () => {
+              const { response } = await dialog.showMessageBox(mainWindow, {
+                type: 'warning',
+                title: 'Clear History',
+                message: 'Are you sure you want to clear all browsing history?',
+                buttons: ['Cancel', 'Clear'],
+                defaultId: 0,
+              });
+              if (response === 1) {
+                const { deleteAllHistory } = require('../../core/storage/repositories/history');
+                deleteAllHistory();
+              }
+            },
+          },
+        ],
+      }] : []),
 
       // Tools
       {
