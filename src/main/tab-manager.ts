@@ -21,6 +21,7 @@ import { validateAndNormalizeUrl } from './utils/url-validator';
 import { attachContextMenu } from './context-menu';
 import type { ContentScriptInjector } from './extensions/content-script-injector';
 import type { ForceDarkMode } from './privacy/force-dark-mode';
+import type { ColorblindMode } from './privacy/colorblind-mode';
 
 interface ManagedTab {
   view: BrowserView;
@@ -35,6 +36,7 @@ export class TabManager {
   private viewBounds: Electron.Rectangle = { x: 0, y: 88, width: 1280, height: 680 };
   private contentScriptInjector: ContentScriptInjector | null = null;
   private forceDarkMode: ForceDarkMode | null = null;
+  private colorblindMode: ColorblindMode | null = null;
   private onNavigateCallback: ((url: string, title: string) => void) | null = null;
 
   constructor() {
@@ -50,6 +52,10 @@ export class TabManager {
 
   setForceDarkMode(darkMode: ForceDarkMode): void {
     this.forceDarkMode = darkMode;
+  }
+
+  setColorblindMode(cbMode: ColorblindMode): void {
+    this.colorblindMode = cbMode;
   }
 
   /**
@@ -314,6 +320,23 @@ export class TabManager {
       // Inject force dark mode CSS
       if (this.forceDarkMode?.isEnabled()) {
         wc.insertCSS(this.forceDarkMode.getCSS()).catch(() => {});
+      }
+
+      // Inject colorblind mode filter
+      if (this.colorblindMode?.getMode() !== 'off') {
+        const css = this.colorblindMode!.getCSS();
+        const svg = this.colorblindMode!.getSVGFilter();
+        if (css) wc.insertCSS(css).catch(() => {});
+        if (svg) {
+          wc.executeJavaScript(`
+            if (!document.getElementById('volary-cb-svg')) {
+              const div = document.createElement('div');
+              div.id = 'volary-cb-svg';
+              div.innerHTML = ${JSON.stringify('PLACEHOLDER')};
+              document.body.appendChild(div);
+            }
+          `.replace('PLACEHOLDER', JSON.stringify(svg).slice(1, -1))).catch(() => {});
+        }
       }
 
       // Inject content scripts for matching extensions

@@ -349,6 +349,15 @@ const api = {
   },
 
   /**
+   * Colorblind Mode API
+   */
+  colorblind: {
+    cycle: async () => ipcRenderer.invoke('colorblind:cycle'),
+    set: async (mode: string) => ipcRenderer.invoke('colorblind:set', { mode }),
+    getStatus: async () => ipcRenderer.invoke('colorblind:status'),
+  },
+
+  /**
    * Extensions API
    */
   extensions: {

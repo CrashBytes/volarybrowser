@@ -17,6 +17,7 @@ import { VaultInitialize } from './components/VaultInitialize';
 import { VaultUnlock } from './components/VaultUnlock';
 import { FindBar } from './components/FindBar';
 import { DownloadBar } from './components/DownloadBar';
+import { NewTabPage } from './components/NewTabPage';
 import { useBrowserStore } from './store/browser-store';
 
 export const App: React.FC = () => {
@@ -291,15 +292,8 @@ export const App: React.FC = () => {
 
       <main className="app-content">
         {/* Web content is rendered by BrowserView in main process */}
-        {tabs.length === 0 && (
-          <div className="welcome-screen">
-            <div className="welcome-content">
-              <h1 className="welcome-title">Volary Browser</h1>
-              <p className="welcome-subtitle">Security-first, context-aware web browser</p>
-              <p className="welcome-hint">Press Ctrl+T to open a new tab</p>
-            </div>
-          </div>
-        )}
+        {/* Show new tab page when the active tab has no URL */}
+        {activeTab && !activeTab.url && <NewTabPage />}
       </main>
 
       <footer className="app-footer" ref={footerRef}>

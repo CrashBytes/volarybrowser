@@ -169,6 +169,10 @@ export enum IPCChannel {
   DARK_MODE_TOGGLE = 'dark:toggle',
   DARK_MODE_STATUS = 'dark:status',
 
+  COLORBLIND_CYCLE = 'colorblind:cycle',
+  COLORBLIND_SET = 'colorblind:set',
+  COLORBLIND_STATUS = 'colorblind:status',
+
   // Extensions
   EXTENSION_GET_ALL = 'extension:get-all',
   EXTENSION_TOGGLE = 'extension:toggle',

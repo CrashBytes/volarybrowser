@@ -1,0 +1,125 @@
+.new-tab-page {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  min-height: 100%;
+  padding: 80px 24px 60px;
+  background: linear-gradient(160deg, #0f0f1a 0%, #1a1a2e 40%, #16213e 100%);
+}
+
+.ntp-content {
+  width: 100%;
+  max-width: 640px;
+}
+
+.ntp-greeting {
+  font-size: 36px;
+  font-weight: 300;
+  color: #e0e0e0;
+  margin: 0 0 32px;
+  letter-spacing: -0.5px;
+}
+
+.ntp-search {
+  margin-bottom: 48px;
+}
+
+.ntp-search__input {
+  width: 100%;
+  padding: 16px 20px;
+  font-size: 16px;
+  font-family: inherit;
+  color: #e0e0e0;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  outline: none;
+  transition: border-color 200ms, box-shadow 200ms, background 200ms;
+}
+
+.ntp-search__input:focus {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+.ntp-search__input::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.ntp-section-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 0 0 16px;
+}
+
+.ntp-sites-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.ntp-site-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 200ms, transform 150ms, border-color 200ms;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+  font-family: inherit;
+}
+
+.ntp-site-card:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
+}
+
+.ntp-site-icon {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+
+.ntp-site-icon img {
+  position: relative;
+  z-index: 1;
+  border-radius: 4px;
+}
+
+.ntp-site-fallback {
+  position: absolute;
+  font-size: 18px;
+  font-weight: 600;
+  color: #6366f1;
+}
+
+.ntp-site-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+@media (max-width: 600px) {
+  .ntp-sites-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .ntp-greeting {
+    font-size: 28px;
+  }
+}

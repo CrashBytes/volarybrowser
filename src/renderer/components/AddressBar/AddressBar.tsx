@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { BackIcon, ForwardIcon, ReloadIcon, StopIcon, LockIcon, UnlockIcon, ReaderIcon, MoonIcon, SunIcon } from '../../assets/icons/NavIcons';
+import { BackIcon, ForwardIcon, ReloadIcon, StopIcon, LockIcon, UnlockIcon, ReaderIcon, MoonIcon, EyeIcon } from '../../assets/icons/NavIcons';
 import './AddressBar.css';
 
 interface AddressBarProps {
@@ -137,12 +137,20 @@ export const AddressBar: React.FC<AddressBarProps> = ({
           <ReaderIcon />
         </button>
         <button
-          className="address-bar__btn address-bar__btn--dark"
+          className="address-bar__btn"
           onClick={() => window.volary.darkMode.toggle()}
           title="Force dark mode"
           aria-label="Toggle dark mode on websites"
         >
           <MoonIcon />
+        </button>
+        <button
+          className="address-bar__btn"
+          onClick={() => window.volary.colorblind.cycle()}
+          title="Colorblind mode (click to cycle: Off → Deuteranopia → Protanopia → Tritanopia)"
+          aria-label="Cycle colorblind mode"
+        >
+          <EyeIcon />
         </button>
       </div>
 

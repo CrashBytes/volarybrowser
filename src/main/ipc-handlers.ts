@@ -63,6 +63,7 @@ import { getSetting, setSetting, getAllSettings } from '../../core/storage/repos
 import { ExtensionManager } from './extensions/extension-manager';
 import { ReadingMode } from './reading-mode';
 import { ForceDarkMode } from './privacy/force-dark-mode';
+import { ColorblindMode } from './privacy/colorblind-mode';
 
 /**
  * IPC Handler function signature
@@ -118,6 +119,7 @@ export class IPCHandlers {
   private extensionManager: ExtensionManager;
   private readingMode: ReadingMode;
   private forceDarkMode: ForceDarkMode;
+  private colorblindMode: ColorblindMode;
   private findInPage: FindInPage;
   private handlers: Map<IPCChannel, HandlerRegistration> = new Map();
 
@@ -138,6 +140,7 @@ export class IPCHandlers {
     extensionManager: ExtensionManager,
     readingMode: ReadingMode,
     forceDarkMode: ForceDarkMode,
+    colorblindMode: ColorblindMode,
   ) {
     this.logger = LoggerFactory.create('IPCHandlers');
     this.windowManager = windowManager;
@@ -148,6 +151,7 @@ export class IPCHandlers {
     this.extensionManager = extensionManager;
     this.readingMode = readingMode;
     this.forceDarkMode = forceDarkMode;
+    this.colorblindMode = colorblindMode;
     this.findInPage = new FindInPage(tabManager);
   }
 
@@ -728,6 +732,30 @@ export class IPCHandlers {
     this.register({
       channel: IPCChannel.DARK_MODE_STATUS,
       handler: async () => ({ enabled: this.forceDarkMode.isEnabled() }),
+    });
+
+    this.register({
+      channel: IPCChannel.COLORBLIND_CYCLE,
+      handler: async () => {
+        const mode = this.colorblindMode.cycle();
+        return { mode, label: this.colorblindMode.getLabel() };
+      },
+    });
+
+    this.register({
+      channel: IPCChannel.COLORBLIND_SET,
+      handler: async (_event, payload: { mode: string }) => {
+        this.colorblindMode.setMode(payload.mode as any);
+        return { mode: this.colorblindMode.getMode(), label: this.colorblindMode.getLabel() };
+      },
+    });
+
+    this.register({
+      channel: IPCChannel.COLORBLIND_STATUS,
+      handler: async () => ({
+        mode: this.colorblindMode.getMode(),
+        label: this.colorblindMode.getLabel(),
+      }),
     });
   }
 
