@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1"/>
+      <stop offset="100%" style="stop-color:#4f46e5"/>
+    </linearGradient>
+    <linearGradient id="birdGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff"/>
+      <stop offset="100%" style="stop-color:#e0e7ff"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#1e1b4b" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- Shield shape - rounded, modern -->
+  <path d="M256 28 C256 28 72 80 72 80 C72 80 72 260 72 260 C72 380 256 484 256 484 C256 484 440 380 440 260 C440 260 440 80 440 80 Z"
+        fill="url(#shieldGrad)" filter="url(#shadow)"
+        stroke="#4338ca" stroke-width="4"/>
+
+  <!-- Inner shield highlight -->
+  <path d="M256 56 C256 56 100 100 100 100 C100 100 100 256 100 256 C100 358 256 448 256 448 C256 448 412 358 412 256 C412 256 412 100 412 100 Z"
+        fill="none" stroke="#818cf8" stroke-width="2" opacity="0.4"/>
+
+  <!-- Stylized bird (swift/falcon) - dynamic flying pose -->
+  <!-- Body -->
+  <path d="M180 260 C180 260 220 200 256 180 C292 200 332 260 332 260 C332 260 310 240 256 240 C202 240 180 260 180 260 Z"
+        fill="url(#birdGrad)" opacity="0.95"/>
+
+  <!-- Left wing - swept back -->
+  <path d="M256 200 C230 180 170 140 120 150 C150 170 200 200 240 220 Z"
+        fill="url(#birdGrad)" opacity="0.95"/>
+
+  <!-- Right wing - swept back -->
+  <path d="M256 200 C282 180 342 140 392 150 C362 170 312 200 272 220 Z"
+        fill="url(#birdGrad)" opacity="0.95"/>
+
+  <!-- Tail feathers -->
+  <path d="M240 240 L256 320 L272 240 Z"
+        fill="url(#birdGrad)" opacity="0.85"/>
+
+  <!-- Head detail -->
+  <circle cx="256" cy="185" r="12" fill="url(#birdGrad)" opacity="0.95"/>
+
+  <!-- Eye -->
+  <circle cx="256" cy="183" r="4" fill="#4338ca"/>
+
+  <!-- Beak -->
+  <path d="M256 175 L262 168 L256 172 L250 168 Z" fill="#fbbf24"/>
+
+  <!-- Speed lines (motion effect) -->
+  <line x1="140" y1="190" x2="110" y2="195" stroke="#c7d2fe" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
+  <line x1="135" y1="210" x2="100" y2="215" stroke="#c7d2fe" stroke-width="2" stroke-linecap="round" opacity="0.4"/>
+  <line x1="372" y1="190" x2="402" y2="195" stroke="#c7d2fe" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
+  <line x1="377" y1="210" x2="412" y2="215" stroke="#c7d2fe" stroke-width="2" stroke-linecap="round" opacity="0.4"/>
+
+  <!-- Lock keyhole at bottom of shield (security) -->
+  <circle cx="256" cy="370" r="16" fill="#1e1b4b" opacity="0.5"/>
+  <circle cx="256" cy="367" r="8" fill="#c7d2fe" opacity="0.7"/>
+  <rect x="252" y="370" width="8" height="14" rx="2" fill="#c7d2fe" opacity="0.7"/>
+</svg>
