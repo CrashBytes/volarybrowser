@@ -121,8 +121,8 @@
     "asar": true,
     "publish": {
       "provider": "github",
-      "owner": "volary",
-      "repo": "browser"
+      "owner": "CrashBytes",
+      "repo": "volarybrowser"
     },
     "mac": {
       "category": "public.app-category.productivity",
