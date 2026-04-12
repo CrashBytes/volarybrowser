@@ -50,6 +50,21 @@ export class PermissionHandler {
       }
     );
 
+    // Permission check handler — Electron calls this to verify whether a
+    // permission is currently granted before the request handler fires.
+    // Without this, geolocation and other checks silently fail.
+    session.defaultSession.setPermissionCheckHandler(
+      (_webContents: WebContents | null, permission: string) => {
+        if (AUTO_ALLOW.has(permission)) return true;
+        if (AUTO_DENY.has(permission)) return false;
+
+        // For geolocation: allow the check so the request handler can prompt
+        if (permission === 'geolocation') return true;
+
+        return true;
+      }
+    );
+
     this.logger.info('PermissionHandler initialized');
   }
 

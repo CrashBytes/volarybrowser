@@ -181,6 +181,11 @@ export enum IPCChannel {
   COLORBLIND_SET = 'colorblind:set',
   COLORBLIND_STATUS = 'colorblind:status',
 
+  // Privacy
+  PRIVACY_CLEAR_DATA = 'privacy:clear-data',
+  PRIVACY_PROXY_SET = 'privacy:proxy-set',
+  PRIVACY_PROXY_STATUS = 'privacy:proxy-status',
+
   // Extensions
   EXTENSION_GET_ALL = 'extension:get-all',
   EXTENSION_TOGGLE = 'extension:toggle',

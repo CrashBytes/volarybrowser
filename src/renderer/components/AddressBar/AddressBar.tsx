@@ -43,11 +43,15 @@ export const AddressBar: React.FC<AddressBarProps> = ({
     }
   }, [url, isFocused]);
 
-  // Load toolbar states on mount
+  // Load toolbar states on mount and listen for bookmark toggle from menu
   useEffect(() => {
     window.volary?.darkMode?.getStatus().then((r: any) => setDarkModeActive(r?.enabled ?? false)).catch(() => {});
     window.volary?.colorblind?.getStatus().then((r: any) => setColorblindLabel(r?.label ?? 'Off')).catch(() => {});
-  }, []);
+
+    const handleMenuBookmark = () => toggleBookmark();
+    window.addEventListener('volary:toggle-bookmark', handleMenuBookmark);
+    return () => window.removeEventListener('volary:toggle-bookmark', handleMenuBookmark);
+  }, [url, isBookmarked]);
 
   // Reset reader mode state when URL changes (navigating away exits reader)
   useEffect(() => {
@@ -67,16 +71,22 @@ export const AddressBar: React.FC<AddressBarProps> = ({
 
   const toggleBookmark = async () => {
     if (!url) return;
-    if (isBookmarked) {
-      const result = await window.volary.bookmarks.isBookmarked(url) as any;
-      if (result?.id) {
-        await window.volary.bookmarks.delete(result.id);
+    try {
+      if (isBookmarked) {
+        const result = await window.volary.bookmarks.isBookmarked(url) as any;
+        if (result?.id) {
+          await window.volary.bookmarks.delete(result.id);
+        }
+        setIsBookmarked(false);
+      } else {
+        const title = url;
+        await window.volary.bookmarks.create(1, title, url);
+        setIsBookmarked(true);
       }
-      setIsBookmarked(false);
-    } else {
-      const title = document.title || url;
-      await window.volary.bookmarks.create(1, title, url);
-      setIsBookmarked(true);
+      // Notify bookmark bar to refresh
+      window.dispatchEvent(new CustomEvent('volary:bookmarks-changed'));
+    } catch (err) {
+      console.error('[AddressBar] Bookmark toggle failed:', err);
     }
   };
 
@@ -221,16 +231,14 @@ export const AddressBar: React.FC<AddressBarProps> = ({
           spellCheck={false}
           autoComplete="off"
         />
-        {url && (
-          <button
-            className="address-bar__bookmark"
-            onClick={toggleBookmark}
-            title={isBookmarked ? 'Remove bookmark' : 'Bookmark this page'}
-            aria-label={isBookmarked ? 'Remove bookmark' : 'Bookmark this page'}
-          >
-            {isBookmarked ? <BookmarkFilledIcon /> : <BookmarkIcon />}
-          </button>
-        )}
+        <button
+          className="address-bar__bookmark"
+          onClick={toggleBookmark}
+          title={isBookmarked ? 'Remove bookmark' : 'Bookmark this page'}
+          aria-label={isBookmarked ? 'Remove bookmark' : 'Bookmark this page'}
+        >
+          {isBookmarked ? <BookmarkFilledIcon /> : <BookmarkIcon />}
+        </button>
       </div>
 
       {suggestions.length > 0 && isFocused && (

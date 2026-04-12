@@ -7,7 +7,7 @@
  * @module core/storage/migrations
  */
 
-import type Database from 'better-sqlite3';
+import type Database from 'better-sqlite3-multiple-ciphers';
 
 interface Migration {
   version: number;

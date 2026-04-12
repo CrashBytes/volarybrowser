@@ -46,3 +46,9 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+.bookmark-bar__empty {
+  font-size: 11px;
+  color: var(--color-text-tertiary, #666);
+  font-style: italic;
+}

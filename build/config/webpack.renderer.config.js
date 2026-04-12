@@ -19,7 +19,7 @@ const rootDir = path.resolve(__dirname, '../..');
 const isDevelopment = process.env.NODE_ENV !== 'production';
 
 module.exports = merge(common, {
-  target: 'electron-renderer',
+  target: 'web',
   resolve: {
     fallback: {
       process: require.resolve('process/browser'),

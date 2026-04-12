@@ -164,6 +164,13 @@ export class NetworkFilter {
     return [...this.blockedUrls];
   }
 
+  /**
+   * Get total number of blocked domains in the filter
+   */
+  getDomainCount(): number {
+    return this.blockedDomains.size;
+  }
+
   private installFilter(): void {
     session.defaultSession.webRequest.onBeforeRequest((details, callback) => {
       if (!this.enabled) {

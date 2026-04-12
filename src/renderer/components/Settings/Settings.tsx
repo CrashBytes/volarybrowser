@@ -24,7 +24,14 @@ interface SettingValues {
   searchEngine: string;
   forceDarkMode: boolean;
   colorblindMode: string;
+  saveHistory: boolean;
   adBlockingEnabled: boolean;
+  blockThirdPartyCookies: boolean;
+  webrtcLeakPrevention: boolean;
+  referrerStripping: boolean;
+  fingerprintResistance: boolean;
+  clearDataOnExit: boolean;
+  autoDeleteCookies: boolean;
   httpsOnly: boolean;
   fontSize: number;
   reducedMotion: boolean;
@@ -36,7 +43,14 @@ const DEFAULT_SETTINGS: SettingValues = {
   searchEngine: 'duckduckgo',
   forceDarkMode: false,
   colorblindMode: 'off',
+  saveHistory: false,
   adBlockingEnabled: true,
+  blockThirdPartyCookies: true,
+  webrtcLeakPrevention: true,
+  referrerStripping: true,
+  fingerprintResistance: true,
+  clearDataOnExit: true,
+  autoDeleteCookies: true,
   httpsOnly: true,
   fontSize: 100,
   reducedMotion: false,
@@ -110,7 +124,14 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, initialSection, onCl
         searchEngine: (all.searchEngine as string) || 'duckduckgo',
         forceDarkMode: (all.forceDarkMode as boolean) || false,
         colorblindMode: (all.colorblindMode as string) || 'off',
+        saveHistory: all.saveHistory === true,
         adBlockingEnabled: all.adBlockingEnabled !== false,
+        blockThirdPartyCookies: all.blockThirdPartyCookies !== false,
+        webrtcLeakPrevention: all.webrtcLeakPrevention !== false,
+        referrerStripping: all.referrerStripping !== false,
+        fingerprintResistance: all.fingerprintResistance !== false,
+        clearDataOnExit: all.clearDataOnExit !== false,
+        autoDeleteCookies: all.autoDeleteCookies !== false,
         httpsOnly: all.httpsOnly !== false,
         fontSize: (all.fontSize as number) || 100,
         reducedMotion: (all.reducedMotion as boolean) || false,
@@ -196,6 +217,7 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, initialSection, onCl
                     <option value="google">Google</option>
                     <option value="bing">Bing</option>
                     <option value="brave">Brave Search</option>
+                    <option value="searxng">SearXNG</option>
                   </select>
                 </div>
 
@@ -217,13 +239,90 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, initialSection, onCl
                 <h2 className="settings-section-title">Privacy & Security</h2>
 
                 <div className="setting-item">
+                  <label className="setting-label">Save Browsing History</label>
+                  <p className="setting-description">Record visited sites and show recent sites on new tabs</p>
+                  <ToggleSwitch
+                    id="save-history"
+                    checked={settings.saveHistory}
+                    onChange={v => updateSetting('saveHistory', v)}
+                    label="Save Browsing History"
+                  />
+                </div>
+
+                <div className="setting-item">
                   <label className="setting-label">Ad & Tracker Blocking</label>
-                  <p className="setting-description">Block known advertising and tracking domains</p>
+                  <p className="setting-description">Block known advertising and tracking domains (community blocklists)</p>
                   <ToggleSwitch
                     id="ad-blocking"
                     checked={settings.adBlockingEnabled}
                     onChange={v => updateSetting('adBlockingEnabled', v)}
                     label="Ad & Tracker Blocking"
+                  />
+                </div>
+
+                <div className="setting-item">
+                  <label className="setting-label">Block Third-Party Cookies</label>
+                  <p className="setting-description">Reject cookies from domains other than the site you are visiting</p>
+                  <ToggleSwitch
+                    id="block-third-party-cookies"
+                    checked={settings.blockThirdPartyCookies}
+                    onChange={v => updateSetting('blockThirdPartyCookies', v)}
+                    label="Block Third-Party Cookies"
+                  />
+                </div>
+
+                <div className="setting-item">
+                  <label className="setting-label">WebRTC Leak Prevention</label>
+                  <p className="setting-description">Prevent websites from discovering your real IP address through WebRTC</p>
+                  <ToggleSwitch
+                    id="webrtc-leak-prevention"
+                    checked={settings.webrtcLeakPrevention}
+                    onChange={v => updateSetting('webrtcLeakPrevention', v)}
+                    label="WebRTC Leak Prevention"
+                  />
+                </div>
+
+                <div className="setting-item">
+                  <label className="setting-label">Referrer Stripping</label>
+                  <p className="setting-description">Remove cross-origin referrer headers so sites cannot track where you came from</p>
+                  <ToggleSwitch
+                    id="referrer-stripping"
+                    checked={settings.referrerStripping}
+                    onChange={v => updateSetting('referrerStripping', v)}
+                    label="Referrer Stripping"
+                  />
+                </div>
+
+                <div className="setting-item">
+                  <label className="setting-label">Fingerprint Resistance</label>
+                  <p className="setting-description">Block canvas, WebGL, and audio fingerprinting techniques</p>
+                  <ToggleSwitch
+                    id="fingerprint-resistance"
+                    checked={settings.fingerprintResistance}
+                    onChange={v => updateSetting('fingerprintResistance', v)}
+                    label="Fingerprint Resistance"
+                  />
+                </div>
+
+                <div className="setting-item">
+                  <label className="setting-label">Auto-Delete Cookies on Tab Close</label>
+                  <p className="setting-description">Automatically remove cookies when a tab is closed</p>
+                  <ToggleSwitch
+                    id="auto-delete-cookies"
+                    checked={settings.autoDeleteCookies}
+                    onChange={v => updateSetting('autoDeleteCookies', v)}
+                    label="Auto-Delete Cookies on Tab Close"
+                  />
+                </div>
+
+                <div className="setting-item">
+                  <label className="setting-label">Clear All Data on Exit</label>
+                  <p className="setting-description">Wipe cookies, cache, and local storage when the browser closes</p>
+                  <ToggleSwitch
+                    id="clear-data-on-exit"
+                    checked={settings.clearDataOnExit}
+                    onChange={v => updateSetting('clearDataOnExit', v)}
+                    label="Clear All Data on Exit"
                   />
                 </div>
 

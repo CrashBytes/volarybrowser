@@ -18,10 +18,13 @@ import { randomUUID } from 'crypto';
 import { TabState, TabCreateOptions, TabResult, TabUpdateEvent, ILogger } from './types';
 import { LoggerFactory } from './utils/logger';
 import { validateAndNormalizeUrl } from './utils/url-validator';
+import { getSetting } from '../../core/storage/repositories/settings';
 import { attachContextMenu } from './context-menu';
 import type { ContentScriptInjector } from './extensions/content-script-injector';
 import type { ForceDarkMode } from './privacy/force-dark-mode';
 import type { ColorblindMode } from './privacy/colorblind-mode';
+import type { FingerprintResistance } from './privacy/fingerprint-resistance';
+import type { CookieManager } from './privacy/cookie-manager';
 
 interface ManagedTab {
   view: BrowserView;
@@ -37,6 +40,8 @@ export class TabManager {
   private contentScriptInjector: ContentScriptInjector | null = null;
   private forceDarkMode: ForceDarkMode | null = null;
   private colorblindMode: ColorblindMode | null = null;
+  private fingerprintResistance: FingerprintResistance | null = null;
+  private cookieManager: CookieManager | null = null;
   private onNavigateCallback: ((url: string, title: string) => void) | null = null;
 
   constructor() {
@@ -56,6 +61,14 @@ export class TabManager {
 
   setColorblindMode(cbMode: ColorblindMode): void {
     this.colorblindMode = cbMode;
+  }
+
+  setFingerprintResistance(fp: FingerprintResistance): void {
+    this.fingerprintResistance = fp;
+  }
+
+  setCookieManager(cm: CookieManager): void {
+    this.cookieManager = cm;
   }
 
   /**
@@ -113,6 +126,11 @@ export class TabManager {
       createdAt: Date.now(),
     };
 
+    // WebRTC leak prevention: restrict to relay-only connections
+    if (getSetting<boolean>('webrtcLeakPrevention', true)) {
+      view.webContents.setWebRTCIPHandlingPolicy('disable_non_proxied_udp');
+    }
+
     this.tabs.set(tabId, { view, state });
     this.attachWebContentsListeners(tabId, view);
     attachContextMenu(view, this);
@@ -156,6 +174,9 @@ export class TabManager {
     // Destroy the webContents
     (tab.view.webContents as any).destroy?.();
     this.tabs.delete(tabId);
+
+    // Auto-delete cookies for this tab's domains
+    this.cookieManager?.cleanupTab(tabId).catch(() => {});
 
     this.logger.info('Tab closed', { tabId });
 
@@ -342,11 +363,13 @@ export class TabManager {
   suspendAllViews(): void {
     this.logger.info('Suspending all tab views');
     for (const [, tab] of this.tabs) {
-      if (!tab.view.webContents.isDestroyed()) {
-        tab.view.setBounds({ x: 0, y: 0, width: 0, height: 0 });
-        tab.view.webContents.setBackgroundThrottling(true);
-        tab.view.webContents.setFrameRate(1);
-      }
+      try {
+        if (tab.view?.webContents && !tab.view.webContents.isDestroyed()) {
+          tab.view.setBounds({ x: 0, y: 0, width: 0, height: 0 });
+          tab.view.webContents.setBackgroundThrottling(true);
+          tab.view.webContents.setFrameRate(1);
+        }
+      } catch { /* tab already destroyed */ }
     }
   }
 
@@ -357,9 +380,11 @@ export class TabManager {
   resumeAllViews(): void {
     this.logger.info('Resuming all tab views');
     for (const [, tab] of this.tabs) {
-      if (!tab.view.webContents.isDestroyed()) {
-        tab.view.webContents.setFrameRate(60);
-      }
+      try {
+        if (tab.view?.webContents && !tab.view.webContents.isDestroyed()) {
+          tab.view.webContents.setFrameRate(60);
+        }
+      } catch { /* tab already destroyed */ }
     }
     this.repositionActiveView();
   }
@@ -368,11 +393,15 @@ export class TabManager {
 
   destroy(): void {
     this.logger.info('Destroying TabManager');
-    for (const [tabId, tab] of this.tabs) {
-      if (this.window && !this.window.isDestroyed()) {
-        this.window.removeBrowserView(tab.view);
-      }
-      (tab.view.webContents as any).destroy?.();
+    for (const [, tab] of this.tabs) {
+      try {
+        if (this.window && !this.window.isDestroyed() && tab.view) {
+          this.window.removeBrowserView(tab.view);
+        }
+        if (tab.view?.webContents && !tab.view.webContents.isDestroyed()) {
+          (tab.view.webContents as any).destroy?.();
+        }
+      } catch { /* already destroyed */ }
     }
     this.tabs.clear();
     this.activeTabId = null;
@@ -405,6 +434,9 @@ export class TabManager {
         this.onNavigateCallback(url, title);
       }
 
+      // Track domain for cookie cleanup on tab close
+      this.cookieManager?.trackDomain(tabId, url);
+
       // Inject force dark mode CSS
       if (this.forceDarkMode?.isEnabled()) {
         wc.insertCSS(this.forceDarkMode.getCSS()).catch(() => {});
@@ -427,6 +459,11 @@ export class TabManager {
         }
       }
 
+      // Inject fingerprint resistance script
+      if (this.fingerprintResistance?.isEnabled()) {
+        wc.executeJavaScript(this.fingerprintResistance.getScript()).catch(() => {});
+      }
+
       // Inject content scripts for matching extensions
       if (this.contentScriptInjector) {
         this.contentScriptInjector.injectForUrl(wc, url).catch((error) => {
@@ -441,10 +478,22 @@ export class TabManager {
         canGoBack: wc.canGoBack(),
         canGoForward: wc.canGoForward(),
       });
+
+      // Record in-page (SPA) navigations to history
+      if (this.onNavigateCallback) {
+        const title = wc.getTitle() || '';
+        this.onNavigateCallback(url, title);
+      }
     });
 
     wc.on('page-title-updated', (_event, title) => {
       this.updateTabState(tabId, { title });
+
+      // Update history with the final title (often unavailable at navigate time)
+      const tab = this.tabs.get(tabId);
+      if (tab && tab.state.url && this.onNavigateCallback) {
+        this.onNavigateCallback(tab.state.url, title);
+      }
     });
 
     wc.on('audio-state-changed', (_event, audible: boolean) => {

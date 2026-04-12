@@ -24,6 +24,7 @@ const SEARCH_ENGINES: Record<string, string> = {
   google: 'https://www.google.com/search?q=',
   bing: 'https://www.bing.com/search?q=',
   brave: 'https://search.brave.com/search?q=',
+  searxng: 'https://searx.be/search?q=',
 };
 
 let currentSearchEngine = 'duckduckgo';
@@ -62,6 +63,10 @@ export function validateAndNormalizeUrl(input: string): ValidatedUrl {
     return { url: trimmed, isSearch: false, wasUpgraded: false };
   }
   if (/^http:\/\//i.test(trimmed)) {
+    // Don't upgrade local/private network addresses to HTTPS
+    if (isLocalUrl(trimmed)) {
+      return { url: trimmed, isSearch: false, wasUpgraded: false };
+    }
     const upgraded = trimmed.replace(/^http:/i, 'https:');
     return { url: upgraded, isSearch: false, wasUpgraded: true };
   }
@@ -102,6 +107,26 @@ function looksLikeUrl(input: string): boolean {
   if (input.includes('.') && /^[a-zA-Z0-9]/.test(input)) return true;
 
   return false;
+}
+
+/**
+ * Check if a URL points to a local or private network address
+ */
+function isLocalUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname;
+    if (host === 'localhost' || host === '127.0.0.1' || host === '::1') return true;
+    // Private IPv4 ranges
+    if (/^10\./.test(host)) return true;
+    if (/^172\.(1[6-9]|2\d|3[01])\./.test(host)) return true;
+    if (/^192\.168\./.test(host)) return true;
+    // .local domains
+    if (host.endsWith('.local')) return true;
+    return false;
+  } catch {
+    return false;
+  }
 }
 
 /**

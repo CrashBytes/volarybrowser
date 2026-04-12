@@ -74,6 +74,6 @@ describe('Database', () => {
     // Re-initialize — should not error
     const db = initDatabase(tempDir);
     const count = db.prepare('SELECT COUNT(*) as c FROM _migrations').get() as { c: number };
-    expect(count.c).toBe(5); // 5 migrations total
+    expect(count.c).toBe(6); // 6 migrations total
   });
 });

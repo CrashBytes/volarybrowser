@@ -32,7 +32,7 @@ module.exports = merge(common, {
     // Don't bundle native modules
     { electron: 'commonjs2 electron' },
     { 'hash-wasm': 'commonjs2 hash-wasm' },
-    { 'better-sqlite3': 'commonjs2 better-sqlite3' },
+    { 'better-sqlite3-multiple-ciphers': 'commonjs2 better-sqlite3-multiple-ciphers' },
     // Handle @noble subpath exports (e.g. @noble/hashes/sha2.js)
     function({ request }, callback) {
       if (/^@noble\/(ciphers|hashes)(\/|$)/.test(request)) {

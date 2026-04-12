@@ -20,6 +20,7 @@ import { DownloadBar } from './components/DownloadBar';
 import { NewTabPage } from './components/NewTabPage';
 import { BookmarkBar } from './components/BookmarkBar';
 import { Settings } from './components/Settings';
+import { AISidebar } from './components/AISidebar';
 import { useBrowserStore } from './store/browser-store';
 
 export const App: React.FC = () => {
@@ -44,6 +45,7 @@ export const App: React.FC = () => {
   const [tabContextMenuOpen, setTabContextMenuOpen] = React.useState(false);
   const [settingsOpen, setSettingsOpen] = React.useState(false);
   const [settingsSection, setSettingsSection] = React.useState<string | undefined>();
+  const [aiSidebarOpen, setAiSidebarOpen] = React.useState(false);
   const [highContrast, setHighContrast] = React.useState(false);
   const [reducedMotion, setReducedMotion] = React.useState(false);
   const [screenReaderMode, setScreenReaderMode] = React.useState(false);
@@ -79,16 +81,18 @@ export const App: React.FC = () => {
 
     const headerHeight = headerRef.current?.offsetHeight || 0;
     const footerHeight = footerRef.current?.offsetHeight || 0;
-    const width = window.innerWidth;
+    const totalWidth = window.innerWidth;
+    const sidebarWidth = aiSidebarOpen ? 420 : 0;
+    const contentWidth = totalWidth - sidebarWidth;
     const height = window.innerHeight;
 
     window.volary.tabs.updateBounds({
       x: 0,
       y: headerHeight,
-      width,
+      width: contentWidth,
       height: Math.max(0, height - headerHeight - footerHeight),
     });
-  }, [isModalOpen]);
+  }, [isModalOpen, aiSidebarOpen]);
 
   /**
    * Initialization
@@ -127,6 +131,9 @@ export const App: React.FC = () => {
     };
     const handleOpenFind = () => openFind();
     const handleToggleReading = () => window.volary.readingMode.toggle();
+    const handleToggleBookmark = () => {
+      window.dispatchEvent(new CustomEvent('volary:toggle-bookmark'));
+    };
     const handleOpenSettings = (_event: unknown, section?: string) => {
       setSettingsSection(typeof section === 'string' ? section : undefined);
       setSettingsOpen(true);
@@ -145,6 +152,7 @@ export const App: React.FC = () => {
     window.volary.on('open-find', handleOpenFind);
     window.volary.on('open-settings', handleOpenSettings);
     window.volary.on('toggle-reading-mode', handleToggleReading);
+    window.volary.on('toggle-bookmark', handleToggleBookmark);
 
     return () => {
       window.volary.off('vault:status-changed', handleVaultChange);
@@ -155,6 +163,7 @@ export const App: React.FC = () => {
       window.volary.off('open-find', handleOpenFind);
       window.volary.off('open-settings', handleOpenSettings);
       window.volary.off('toggle-reading-mode', handleToggleReading);
+      window.volary.off('toggle-bookmark', handleToggleBookmark);
       window.removeEventListener('volary:open-settings', handleOpenSettingsDOM);
     };
   }, []);
@@ -226,6 +235,9 @@ export const App: React.FC = () => {
       } else if (mod && e.key === '0') {
         e.preventDefault();
         window.volary.zoom.reset();
+      } else if (mod && e.shiftKey && e.key === 'a') {
+        e.preventDefault();
+        setAiSidebarOpen(prev => !prev);
       }
     };
 
@@ -309,6 +321,13 @@ export const App: React.FC = () => {
           <span className="status-text">{blockedCount} blocked</span>
         </div>
       )}
+      <div
+        className={`status-indicator status-clickable${aiSidebarOpen ? ' status-active' : ''}`}
+        onClick={() => setAiSidebarOpen(prev => !prev)}
+        title="Toggle AI Sidebar (Cmd+Shift+A)"
+      >
+        <span className="status-text">AI</span>
+      </div>
       {activeTab && (
         <div className="status-indicator">
           <span className="status-text">{activeTab.url || 'New Tab'}</span>
@@ -361,11 +380,18 @@ export const App: React.FC = () => {
         <BookmarkBar />
       </header>
 
-      <main className="app-content" id="main-content" role="main" aria-label="Web content">
-        {/* Web content is rendered by BrowserView in main process */}
-        {/* Show new tab page when the active tab has no URL */}
-        {activeTab && !activeTab.url && <NewTabPage />}
-      </main>
+      <div className="app-body">
+        <main className="app-content" id="main-content" role="main" aria-label="Web content">
+          {/* Web content is rendered by BrowserView in main process */}
+          {/* Show new tab page when the active tab has no URL */}
+          {activeTab && !activeTab.url && <NewTabPage />}
+        </main>
+
+        <AISidebar
+          isOpen={aiSidebarOpen}
+          onClose={() => setAiSidebarOpen(false)}
+        />
+      </div>
 
       <footer className="app-footer" ref={footerRef} role="contentinfo" aria-label="Status bar">
         {showBlockedPanel && blockedUrls.length > 0 && (

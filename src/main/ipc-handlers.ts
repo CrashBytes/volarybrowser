@@ -584,7 +584,9 @@ export class IPCHandlers {
     this.register({
       channel: IPCChannel.BOOKMARK_CREATE,
       handler: async (_event, payload: { parentId: number; title: string; url: string | null; isFolder?: boolean }) => {
+        this.logger.info('Bookmark create called', { parentId: payload.parentId, title: payload.title, url: payload.url });
         const id = createBookmark(payload.parentId, payload.title, payload.url, payload.isFolder);
+        this.logger.info('Bookmark created', { id });
         return { success: true, id };
       },
       validator: zodValidator(bookmarkCreateSchema),

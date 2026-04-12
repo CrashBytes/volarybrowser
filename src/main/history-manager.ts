@@ -8,6 +8,7 @@
  */
 
 import { addVisit, searchHistory, getRecentHistory, deleteAllHistory, deleteHistoryEntry, deleteHistoryRange } from '../../core/storage/repositories/history';
+import { getSetting } from '../../core/storage/repositories/settings';
 import { ILogger } from './types';
 import { LoggerFactory } from './utils/logger';
 
@@ -24,8 +25,11 @@ export class HistoryManager {
   /**
    * Record a navigation event
    * Called by TabManager on did-navigate
+   * Double-checks saveHistory setting as a safety guarantee
    */
   recordVisit(url: string, title: string): void {
+    // Safety: never record if history is disabled, even if caller forgot to check
+    if (getSetting<boolean>('saveHistory', false) !== true) return;
     if (IGNORED_PREFIXES.some(p => url.startsWith(p))) return;
     if (!url) return;
 

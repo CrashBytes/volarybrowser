@@ -35,6 +35,7 @@ import { initDatabase, closeDatabase } from '../../core/storage/database';
 import { HistoryManager } from './history-manager';
 import { DownloadManager } from './download-manager';
 import { NetworkFilter } from './privacy/network-filter';
+import { HeaderPrivacy } from './privacy/header-privacy';
 import { PermissionHandler } from './permission-dialog';
 import { CrashRecovery } from './crash-recovery';
 import { AppMenu } from './app-menu';
@@ -43,6 +44,10 @@ import { getSetting } from '../../core/storage/repositories/settings';
 import { ReadingMode } from './reading-mode';
 import { ForceDarkMode } from './privacy/force-dark-mode';
 import { ColorblindMode } from './privacy/colorblind-mode';
+import { FingerprintResistance } from './privacy/fingerprint-resistance';
+import { CookieManager } from './privacy/cookie-manager';
+import { BlocklistUpdater } from './privacy/blocklist-updater';
+import { applyDoHConfig } from './privacy/doh-config';
 
 /**
  * Application Controller
@@ -63,6 +68,10 @@ class VolaryBrowser {
   private historyManager: HistoryManager;
   private downloadManager: DownloadManager;
   private networkFilter: NetworkFilter;
+  private headerPrivacy!: HeaderPrivacy;
+  private fingerprintResistance: FingerprintResistance;
+  private cookieManager: CookieManager;
+  private blocklistUpdater: BlocklistUpdater;
   private permissionHandler: PermissionHandler;
   private crashRecovery: CrashRecovery;
   private readingMode: ReadingMode;
@@ -109,6 +118,9 @@ class VolaryBrowser {
     this.historyManager = new HistoryManager();
     this.downloadManager = new DownloadManager();
     this.networkFilter = new NetworkFilter();
+    this.fingerprintResistance = new FingerprintResistance();
+    this.cookieManager = new CookieManager();
+    this.blocklistUpdater = new BlocklistUpdater();
     this.permissionHandler = new PermissionHandler();
     this.crashRecovery = new CrashRecovery();
     this.readingMode = new ReadingMode(this.tabManager);
@@ -122,6 +134,9 @@ class VolaryBrowser {
 
     // Configure application behavior
     this.configureApplicationDefaults();
+
+    // Apply DNS over HTTPS before app.ready
+    applyDoHConfig();
 
     // Register lifecycle handlers
     this.registerLifecycleHandlers();
@@ -300,12 +315,31 @@ class VolaryBrowser {
       } catch { /* use defaults */ }
 
       // Initialize privacy/security systems
+      this.headerPrivacy = new HeaderPrivacy();
+      this.headerPrivacy.initialize();
       this.networkFilter.initialize();
       this.permissionHandler.initialize();
       this.forceDarkMode.initialize();
       this.colorblindMode.initialize();
+      this.fingerprintResistance.initialize(getSetting<boolean>('fingerprintResistance', true));
+      this.cookieManager.initialize(getSetting<boolean>('autoDeleteCookies', true));
+      this.blocklistUpdater.initialize();
       this.tabManager.setForceDarkMode(this.forceDarkMode);
       this.tabManager.setColorblindMode(this.colorblindMode);
+      this.tabManager.setFingerprintResistance(this.fingerprintResistance);
+      this.tabManager.setCookieManager(this.cookieManager);
+
+      // Load expanded blocklists
+      try {
+        const domains = await this.blocklistUpdater.loadAll();
+        if (domains.length > 0) {
+          this.networkFilter.addDomains(domains);
+          this.logger.info('Expanded blocklist loaded', { domains: domains.length, total: this.networkFilter.getDomainCount() });
+        }
+      } catch (error) {
+        this.logger.error('Failed to load expanded blocklists', error as Error);
+      }
+
       this.logger.debug('Privacy systems initialized');
 
       // Configure security policies (CSP for our UI)
@@ -324,7 +358,9 @@ class VolaryBrowser {
       if (mainWindow) {
         this.tabManager.setWindow(mainWindow);
         this.tabManager.onNavigate((url, title) => {
-          this.historyManager.recordVisit(url, title);
+          if (getSetting<boolean>('saveHistory', false)) {
+            this.historyManager.recordVisit(url, title);
+          }
           this.networkFilter.resetCount();
           // Persist tab state for crash recovery
           const tabs = this.tabManager.getAllTabStates();
@@ -385,46 +421,14 @@ class VolaryBrowser {
 
     const defaultSession = session.defaultSession;
 
-    // Set Content Security Policy — only for the renderer chrome, not tab content.
-    // Tab BrowserViews load web pages that define their own CSP.
-    // We only enforce CSP on our own renderer UI (loaded from file:// or localhost).
-    defaultSession.webRequest.onHeadersReceived((details, callback) => {
-      const isOurUI = details.url.startsWith('file://') ||
-        details.url.startsWith('http://localhost');
-
-      if (isOurUI) {
-        callback({
-          responseHeaders: {
-            ...details.responseHeaders,
-            'Content-Security-Policy': [config.security.contentSecurityPolicy],
-          },
-        });
-      } else {
-        // Pass through web content CSP headers unmodified
-        callback({ responseHeaders: details.responseHeaders });
-      }
-    });
-
     // Certificate validation (enforce HTTPS)
     defaultSession.setCertificateVerifyProc((request, callback) => {
-      // In development, allow self-signed certs for localhost
       if (config.app.isDevelopment && request.hostname === 'localhost') {
-        callback(0); // Accept
+        callback(0);
         return;
       }
-
-      // Production: Strict certificate validation
-      // -3 = Use Chromium's default verification
       callback(-3);
     });
-
-    // Permission handling is done by PermissionHandler (initialized earlier)
-
-    // Future: WebRequest filtering for ad/tracker blocking
-    // defaultSession.webRequest.onBeforeRequest((details, callback) => {
-    //   // Check URL against blocklist
-    //   // callback({ cancel: shouldBlock });
-    // });
 
     this.logger.debug('Security policies configured');
   }
@@ -483,6 +487,19 @@ class VolaryBrowser {
     this.logger.info('Application shutting down');
 
     try {
+      // Clear browsing data on exit if enabled
+      if (getSetting<boolean>('clearDataOnExit', true)) {
+        try {
+          await session.defaultSession.clearStorageData({
+            storages: ['cookies', 'localstorage', 'cachestorage', 'indexdb', 'shadercache', 'websql', 'serviceworkers'],
+          });
+          await session.defaultSession.clearCache();
+          this.logger.info('Browsing data cleared on exit');
+        } catch (error) {
+          this.logger.error('Failed to clear browsing data on exit', error as Error);
+        }
+      }
+
       // Destroy extensions and tabs before closing windows
       this.extensionManager.destroy();
       this.tabManager.destroy();

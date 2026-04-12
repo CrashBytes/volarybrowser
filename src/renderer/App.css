@@ -40,8 +40,20 @@
 }
 
 /**
+ * Application Body
+ *
+ * Row layout containing the main content and optional AI sidebar
+ */
+.app-body {
+  display: flex;
+  flex-direction: row;
+  flex: 1;
+  overflow: hidden;
+}
+
+/**
  * Application Content Area
- * 
+ *
  * Flexible growth to fill available space
  * Scrollable content with custom scrollbar
  */
@@ -306,6 +318,16 @@
 
 .status-clickable:hover {
   background: var(--color-surface-elevated, #333);
+}
+
+.status-clickable.status-active {
+  background: rgba(99, 102, 241, 0.2);
+  color: #6366f1;
+}
+
+.status-clickable.status-active .status-text {
+  color: #6366f1;
+  font-weight: 600;
 }
 
 /* Blocked requests panel — rendered inline inside footer */

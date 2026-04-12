@@ -25,6 +25,9 @@ export const NewTabPage: React.FC = () => {
 
   const loadRecentSites = async () => {
     try {
+      const settings = await window.volary.settings.getAll();
+      if (settings.saveHistory !== true) return;
+
       const history = await window.volary.history.getRecent(50);
       // Deduplicate by domain and take top 8
       const seen = new Set<string>();
@@ -86,7 +89,7 @@ export const NewTabPage: React.FC = () => {
 
         {recentSites.length > 0 && (
           <div className="ntp-sites">
-            <h2 className="ntp-section-title">Frequently Visited</h2>
+            <h2 className="ntp-section-title">Recent Sites</h2>
             <div className="ntp-sites-grid">
               {recentSites.map((site, i) => (
                 <button
