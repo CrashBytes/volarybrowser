@@ -172,7 +172,10 @@ export class TabManager {
     }
 
     // Destroy the webContents
-    (tab.view.webContents as any).destroy?.();
+    const wc = tab.view?.webContents;
+    if (wc && !wc.isDestroyed()) {
+      (wc as any).destroy?.();
+    }
     this.tabs.delete(tabId);
 
     // Auto-delete cookies for this tab's domains
@@ -256,15 +259,17 @@ export class TabManager {
 
   reload(): void {
     const tab = this.getActiveTab();
-    if (tab) {
-      tab.view.webContents.reload();
+    const wc = tab?.view?.webContents;
+    if (wc && !wc.isDestroyed()) {
+      wc.reload();
     }
   }
 
   stop(): void {
     const tab = this.getActiveTab();
-    if (tab) {
-      tab.view.webContents.stop();
+    const wc = tab?.view?.webContents;
+    if (wc && !wc.isDestroyed()) {
+      wc.stop();
     }
   }
 
@@ -293,6 +298,31 @@ export class TabManager {
     tab.state.isPinned = !tab.state.isPinned;
     this.broadcastTabUpdate();
     return tab.state.isPinned;
+  }
+
+  // -- Reorder --
+
+  reorderTab(tabId: string, newIndex: number): boolean {
+    if (!this.tabs.has(tabId)) return false;
+    const entries = Array.from(this.tabs.entries());
+    const fromIndex = entries.findIndex(([id]) => id === tabId);
+    if (fromIndex === -1) return false;
+
+    const clamped = Math.max(0, Math.min(newIndex, entries.length - 1));
+    if (clamped === fromIndex) return false;
+
+    const [moved] = entries.splice(fromIndex, 1);
+    entries.splice(clamped, 0, moved);
+
+    // Rebuild the Map in the new order — Map iteration preserves insertion order,
+    // so this is what drives the tab strip's visual order via getAllTabStates().
+    this.tabs.clear();
+    for (const [id, managed] of entries) {
+      this.tabs.set(id, managed);
+    }
+
+    this.broadcastTabUpdate();
+    return true;
   }
 
   // -- Audio --
