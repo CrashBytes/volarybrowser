@@ -43,6 +43,8 @@ export const App: React.FC = () => {
 
   const [isMaximized, setIsMaximized] = React.useState(false);
   const [tabContextMenuOpen, setTabContextMenuOpen] = React.useState(false);
+  const [bookmarkDialogOpen, setBookmarkDialogOpen] = React.useState(false);
+  const [folderDropdownHeight, setFolderDropdownHeight] = React.useState(0);
   const [settingsOpen, setSettingsOpen] = React.useState(false);
   const [settingsSection, setSettingsSection] = React.useState<string | undefined>();
   const [aiSidebarOpen, setAiSidebarOpen] = React.useState(false);
@@ -63,6 +65,7 @@ export const App: React.FC = () => {
   const isModalOpen = vaultModalVisible
     || showBlockedPanel
     || tabContextMenuOpen
+    || bookmarkDialogOpen
     || settingsOpen
     || (activeTab != null && !activeTab.url);
 
@@ -85,14 +88,18 @@ export const App: React.FC = () => {
     const sidebarWidth = aiSidebarOpen ? 420 : 0;
     const contentWidth = totalWidth - sidebarWidth;
     const height = window.innerHeight;
+    // A folder dropdown anchors below the bookmark bar and pushes the
+    // BrowserView's top down by its height so the dropdown stays visible
+    // above the page instead of being covered by the native view.
+    const topOffset = headerHeight + folderDropdownHeight;
 
     window.volary.tabs.updateBounds({
       x: 0,
-      y: headerHeight,
+      y: topOffset,
       width: contentWidth,
-      height: Math.max(0, height - headerHeight - footerHeight),
+      height: Math.max(0, height - topOffset - footerHeight),
     });
-  }, [isModalOpen, aiSidebarOpen]);
+  }, [isModalOpen, aiSidebarOpen, folderDropdownHeight]);
 
   /**
    * Initialization
@@ -377,7 +384,10 @@ export const App: React.FC = () => {
           onStop={() => window.volary.navigation.reload()}
         />
         <FindBar />
-        <BookmarkBar />
+        <BookmarkBar
+          onDialogChange={setBookmarkDialogOpen}
+          onFolderDropdownHeight={setFolderDropdownHeight}
+        />
       </header>
 
       <div className="app-body">

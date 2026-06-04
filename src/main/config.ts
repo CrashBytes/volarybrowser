@@ -130,7 +130,7 @@ class Configuration {
       // Strict CSP: Only allow resources from same origin
       // In production, this should be even more restrictive
       contentSecurityPolicy: isDevelopment()
-        ? "default-src 'self' 'unsafe-inline' 'unsafe-eval'; script-src 'self' 'unsafe-inline' 'unsafe-eval';"
+        ? "default-src 'self' 'unsafe-inline' 'unsafe-eval'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; img-src 'self' data: https: http://localhost:*;"
         : "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:;",
       
       enableRemoteModule: false, // DEPRECATED: Remote module is security vulnerability

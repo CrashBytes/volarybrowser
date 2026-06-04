@@ -47,7 +47,17 @@ function rowToBookmark(row: BookmarkRow): Bookmark {
  */
 export function createBookmark(parentId: number, title: string, url: string | null, isFolder = false): number {
   const db = getDatabase();
-  // Get next position
+
+  // Idempotency: for URL bookmarks, return the existing row if the same URL is
+  // already bookmarked. Prevents duplicates when the same toggle fires from
+  // multiple sources (star button + Cmd+D) before React state catches up.
+  if (!isFolder && url) {
+    const existing = db.prepare(
+      'SELECT id FROM bookmarks WHERE url = ? AND is_folder = 0 LIMIT 1'
+    ).get(url) as { id: number } | undefined;
+    if (existing) return existing.id;
+  }
+
   const maxPos = db.prepare(
     'SELECT COALESCE(MAX(position), -1) as max_pos FROM bookmarks WHERE parent_id = ?'
   ).get(parentId) as { max_pos: number };

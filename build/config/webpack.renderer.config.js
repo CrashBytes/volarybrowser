@@ -68,7 +68,7 @@ module.exports = merge(common, {
       meta: isDevelopment ? {
         'Content-Security-Policy': {
           'http-equiv': 'Content-Security-Policy',
-          content: "default-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:*; script-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src 'self' ws://localhost:*;",
+          content: "default-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:*; script-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src 'self' ws://localhost:*; img-src 'self' data: https: http://localhost:*;",
         },
       } : {},
     }),
