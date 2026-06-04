@@ -45,6 +45,7 @@ jobs:
         run: npm run build:standalone
 
       - name: Check bundle size
+        shell: bash
         run: |
           MAIN_SIZE=$(wc -c < dist/main.js)
           echo "main.js: $MAIN_SIZE bytes"
