@@ -6,3 +6,7 @@ coverage/
 *.db-journal
 *.db-wal
 CHANGELOG.md
+
+# Dev artifacts & editor-local settings
+.dev-logs/
+.vscode/
