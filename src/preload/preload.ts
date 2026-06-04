@@ -237,6 +237,13 @@ const api = {
     },
 
     /**
+     * Reorder a tab to a new index
+     */
+    reorder: async (tabId: string, newIndex: number) => {
+      return ipcRenderer.invoke('tab:reorder', { tabId, newIndex });
+    },
+
+    /**
      * Update tab content area bounds
      *
      * Called by renderer when chrome layout changes (resize, etc.)

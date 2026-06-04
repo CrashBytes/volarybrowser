@@ -27,12 +27,53 @@ export const TabBar: React.FC<TabBarProps> = ({
   onContextMenuChange,
 }) => {
   const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
+  const [draggingTabId, setDraggingTabId] = useState<string | null>(null);
+  const [dropIndex, setDropIndex] = useState<number | null>(null);
 
   const handleMouseDown = (e: React.MouseEvent, tabId: string) => {
     if (e.button === 1) {
       e.preventDefault();
       onTabClose(tabId);
     }
+  };
+
+  const handleTabDragStart = (e: React.DragEvent, tabId: string) => {
+    e.stopPropagation();
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', tabId);
+    setDraggingTabId(tabId);
+  };
+
+  const handleTabDragOver = (e: React.DragEvent, targetIndex: number) => {
+    if (draggingTabId === null) return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'move';
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const midpoint = rect.left + rect.width / 2;
+    const before = e.clientX < midpoint;
+    setDropIndex(before ? targetIndex : targetIndex + 1);
+  };
+
+  const handleTabDrop = (e: React.DragEvent) => {
+    if (draggingTabId === null || dropIndex === null) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const fromIndex = tabs.findIndex((t) => t.id === draggingTabId);
+    // When dropping after the original position, removing the dragged item
+    // shifts all later positions down by one, so subtract 1 to land in the
+    // slot the user actually pointed at.
+    const targetIndex = dropIndex > fromIndex ? dropIndex - 1 : dropIndex;
+    if (fromIndex !== -1 && targetIndex !== fromIndex) {
+      window.volary.tabs.reorder(draggingTabId, targetIndex);
+    }
+    setDraggingTabId(null);
+    setDropIndex(null);
+  };
+
+  const handleTabDragEnd = () => {
+    setDraggingTabId(null);
+    setDropIndex(null);
   };
 
   const handleContextMenu = (e: React.MouseEvent, tabId: string, tabIndex: number) => {
@@ -94,13 +135,36 @@ export const TabBar: React.FC<TabBarProps> = ({
 
   return (
     <div className="tab-bar" role="tablist" onClick={closeContextMenu}>
-      <div className="tab-list">
-        {tabs.map((tab, index) => (
+      <div
+        className="tab-list"
+        onDrop={handleTabDrop}
+        onDragOver={(e) => {
+          if (draggingTabId === null) return;
+          if (e.target === e.currentTarget) {
+            e.preventDefault();
+            setDropIndex(tabs.length);
+          }
+        }}
+      >
+        {tabs.map((tab, index) => {
+          const isDragging = draggingTabId === tab.id;
+          const showDropBefore = dropIndex === index && draggingTabId !== null && draggingTabId !== tab.id;
+          const showDropAfter =
+            dropIndex === index + 1 &&
+            draggingTabId !== null &&
+            draggingTabId !== tab.id &&
+            (index === tabs.length - 1 || tabs[index + 1]?.id !== draggingTabId);
+          return (
           <div
             key={tab.id}
-            className={`tab-item${tab.id === activeTabId ? ' tab-item--active' : ''}${tab.isLoading ? ' tab-item--loading' : ''}${tab.isPinned ? ' tab-item--pinned' : ''}`}
+            className={`tab-item${tab.id === activeTabId ? ' tab-item--active' : ''}${tab.isLoading ? ' tab-item--loading' : ''}${tab.isPinned ? ' tab-item--pinned' : ''}${isDragging ? ' tab-item--dragging' : ''}${showDropBefore ? ' tab-item--drop-before' : ''}${showDropAfter ? ' tab-item--drop-after' : ''}`}
             role="tab"
             aria-selected={tab.id === activeTabId}
+            draggable
+            onDragStart={(e) => handleTabDragStart(e, tab.id)}
+            onDragOver={(e) => handleTabDragOver(e, index)}
+            onDrop={handleTabDrop}
+            onDragEnd={handleTabDragEnd}
             onClick={() => onTabSwitch(tab.id)}
             onMouseDown={(e) => handleMouseDown(e, tab.id)}
             onContextMenu={(e) => handleContextMenu(e, tab.id, index)}
@@ -147,7 +211,8 @@ export const TabBar: React.FC<TabBarProps> = ({
               </button>
             )}
           </div>
-        ))}
+          );
+        })}
       </div>
       <button
         className="tab-new"

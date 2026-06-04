@@ -41,6 +41,11 @@ export const tabUpdateBoundsSchema = z.object({
   height: z.number(),
 });
 
+export const tabReorderSchema = z.object({
+  tabId: z.string(),
+  newIndex: z.number().int().nonnegative(),
+});
+
 // History
 export const historySearchSchema = z.object({
   query: z.string(),

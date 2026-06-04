@@ -53,6 +53,30 @@
   color: var(--color-text-primary, #e0e0e0);
 }
 
+.tab-item--dragging {
+  opacity: 0.4;
+}
+
+.tab-item--drop-before::before,
+.tab-item--drop-after::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  width: 2px;
+  background: var(--color-primary-base, #6366f1);
+  border-radius: 1px;
+  pointer-events: none;
+}
+
+.tab-item--drop-before::before {
+  left: -2px;
+}
+
+.tab-item--drop-after::before {
+  right: -2px;
+}
+
 .tab-item--active::after {
   content: '';
   position: absolute;

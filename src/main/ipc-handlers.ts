@@ -36,6 +36,7 @@ import {
   vaultUnlockSchema,
   navNavigateToSchema,
   tabCloseSchema,
+  tabReorderSchema,
   tabSwitchSchema,
   tabUpdateBoundsSchema,
   historySearchSchema,
@@ -539,6 +540,15 @@ export class IPCHandlers {
         const muted = this.tabManager.toggleMute(payload.tabId);
         return { muted };
       },
+    });
+
+    this.register({
+      channel: IPCChannel.TAB_REORDER,
+      handler: async (_event, payload: { tabId: string; newIndex: number }) => {
+        const moved = this.tabManager.reorderTab(payload.tabId, payload.newIndex);
+        return { success: moved };
+      },
+      validator: zodValidator(tabReorderSchema),
     });
   }
 
