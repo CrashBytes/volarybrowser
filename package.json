@@ -11,6 +11,7 @@
     "build": "tsc --build",
     "build:prod": "npm run build && webpack --config build/config/webpack.prod.config.js --mode production",
     "start": "electron dist/main.js",
+    "start:dev": "bash scripts/dev.sh",
     "start:prod": "npm run build:standalone && npx electron-rebuild -f -w better-sqlite3-multiple-ciphers --silent && electron dist/main.js",
     "build:standalone": "NODE_ENV=production webpack --config build/config/webpack.main.config.js --mode production && NODE_ENV=production webpack --config build/config/webpack.preload.config.js --mode production && NODE_ENV=production webpack --config build/config/webpack.renderer.config.js --mode production",
     "pack": "npm run build:standalone && electron-builder --dir",

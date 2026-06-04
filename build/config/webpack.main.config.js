@@ -25,7 +25,7 @@ module.exports = merge(common, {
   output: {
     path: path.resolve(rootDir, 'dist'),
     filename: '[name].js',
-    clean: true,
+    clean: false,
   },
 
   externals: [
