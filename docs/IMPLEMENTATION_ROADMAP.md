@@ -709,7 +709,7 @@ export const WebView: React.FC<WebViewProps> = ({ tab }) => {
 
 1. **Verify Build System**
 ```bash
-cd /Users/blackholesoftware/github/volarybrowser
+cd path/to/volarybrowser
 npm install
 npm run build
 npm start
