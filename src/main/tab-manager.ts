@@ -452,6 +452,14 @@ export class TabManager {
     });
 
     wc.on('did-navigate', (_event, url) => {
+      // A hostile page (e.g. an anti-bot challenge redirect) can tear the
+      // WebContents down at the same instant this event fires. Calling into a
+      // destroyed WebContents below — canGoBack()/getTitle() or, worse, the
+      // insertCSS()/executeJavaScript() injections — can trip an internal
+      // Electron CHECK and abort the whole browser process (SIGTRAP). The
+      // .catch() handlers only catch JS promise rejections, not that native
+      // abort, so guard the entire handler up front.
+      if (wc.isDestroyed()) return;
       this.updateTabState(tabId, {
         url,
         canGoBack: wc.canGoBack(),
@@ -503,6 +511,7 @@ export class TabManager {
     });
 
     wc.on('did-navigate-in-page', (_event, url) => {
+      if (wc.isDestroyed()) return;
       this.updateTabState(tabId, {
         url,
         canGoBack: wc.canGoBack(),
