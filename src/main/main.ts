@@ -380,17 +380,14 @@ class VolaryBrowser {
         });
         this.downloadManager.initialize(mainWindow);
         new AppMenu(this.tabManager).build(mainWindow);
-        // Restore tabs from previous session (crash recovery)
-        const savedTabs = this.crashRecovery.getSavedTabs();
-        if (savedTabs.length > 0) {
-          this.logger.info('Restoring tabs from previous session', { count: savedTabs.length });
-          for (const saved of savedTabs) {
-            await this.tabManager.createTab({ url: saved.url, active: saved.isActive });
-          }
-          this.crashRecovery.clearSavedTabs();
-        } else {
-          await this.tabManager.createTab({ active: true });
-        }
+        // Always start with a single fresh tab. Auto-restore of the previous
+        // session is intentionally disabled: it serially awaited loadURL for
+        // every saved tab here, blocking the rest of init (including the vault)
+        // behind page loads that can hang. Clear any stale crash-recovery
+        // state so a prior session can never resurface. Manual named sessions
+        // remain available via the application menu.
+        this.crashRecovery.clearSavedTabs();
+        await this.tabManager.createTab({ active: true });
         this.logger.debug('Tab manager initialized');
       }
 
