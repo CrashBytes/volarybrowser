@@ -1,6 +1,6 @@
 {
   "name": "volary-browser",
-  "version": "0.2.2-alpha",
+  "version": "0.2.3-alpha",
   "description": "Security-first, context-aware web browser built on Chromium",
   "main": "dist/main.js",
   "scripts": {
