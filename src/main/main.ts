@@ -165,10 +165,17 @@ class VolaryBrowser {
    * - Set user agent to avoid fingerprinting
    */
   private configureApplicationDefaults(): void {
-    // Disable GPU in CI/headless environments
-    if (process.env.CI === 'true' || process.env.HEADLESS === 'true') {
+    // Disable GPU in CI/headless environments, or when explicitly requested
+    // via VOLARY_DISABLE_GPU=1. Routing compositing through software avoids
+    // GPU-process faults (e.g. Skia SharedImageManager SIGTRAP crashes) that
+    // some heavy/video pages can trigger.
+    const gpuDisableRequested =
+      process.env.VOLARY_DISABLE_GPU === '1' || process.env.VOLARY_DISABLE_GPU === 'true';
+    if (process.env.CI === 'true' || process.env.HEADLESS === 'true' || gpuDisableRequested) {
       app.disableHardwareAcceleration();
-      this.logger.info('GPU acceleration disabled (headless mode)');
+      this.logger.info('GPU acceleration disabled', {
+        reason: gpuDisableRequested ? 'VOLARY_DISABLE_GPU' : 'headless',
+      });
     }
 
     // Set application name (used in window titles, notifications)

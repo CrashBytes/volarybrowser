@@ -66,7 +66,12 @@ until curl -sSf "http://localhost:$DEV_PORT" >/dev/null 2>&1; do
   sleep 1
 done
 
-echo "[dev] launching Electron..."
+if [[ "${VOLARY_DISABLE_GPU:-}" == "1" || "${VOLARY_DISABLE_GPU:-}" == "true" ]]; then
+  echo "[dev] GPU acceleration disabled (VOLARY_DISABLE_GPU set) — software compositing"
+fi
+
+echo "[dev] launching Electron... (set VOLARY_DISABLE_GPU=1 to disable GPU)"
+# VOLARY_DISABLE_GPU is inherited by the child and read in configureApplicationDefaults().
 npx --no-install electron dist/main.js &
 ELECTRON_PID=$!
 
