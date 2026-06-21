@@ -70,6 +70,7 @@ jobs:
             release/*.AppImage
             release/*.deb
             release/*.exe
+          retention-days: 7
             release/latest*.yml
 
   release:
