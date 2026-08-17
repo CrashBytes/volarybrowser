@@ -438,7 +438,7 @@ export class IPCHandlers {
     // Vault status query
     this.register({
       channel: IPCChannel.VAULT_STATUS,
-      handler: async (event) => {
+      handler: async (_event) => {
         return this.vaultManager.getStatus();
       },
     });
@@ -806,7 +806,7 @@ export class IPCHandlers {
     this.register({
       channel: IPCChannel.COLORBLIND_SET,
       handler: async (_event, payload: { mode: string }) => {
-        this.colorblindMode.setMode(payload.mode as any);
+        this.colorblindMode.setMode(payload.mode);
         return { mode: this.colorblindMode.getMode(), label: this.colorblindMode.getLabel() };
       },
     });
@@ -843,7 +843,7 @@ export class IPCHandlers {
               savedAt: stat.mtimeMs,
             });
           }
-          return entries.sort((a: any, b: any) => b.savedAt - a.savedAt);
+          return entries.sort((a, b) => b.savedAt - a.savedAt);
         } catch {
           return [];
         }

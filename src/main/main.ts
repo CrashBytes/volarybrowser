@@ -22,7 +22,6 @@
  */
 
 import { app, BrowserWindow, powerMonitor, session } from 'electron';
-import * as path from 'path';
 import { config } from './config';
 import { WindowManager } from './window-manager';
 import { IPCHandlers } from './ipc-handlers';
@@ -449,7 +448,7 @@ class VolaryBrowser {
     this.logger.info('Creating main window');
 
     const windowConfig = config.window;
-    const mainWindow = this.windowManager.createWindow(windowConfig);
+    this.windowManager.createWindow(windowConfig);
 
     // Window created successfully
     this.logger.info('Main window created', {
