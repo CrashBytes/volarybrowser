@@ -21,7 +21,9 @@
  * @module ipc-handlers
  */
 
-import { ipcMain, BrowserWindow, IpcMainInvokeEvent } from 'electron';
+import { ipcMain, BrowserWindow, IpcMainInvokeEvent, app, shell } from 'electron';
+import { promises as fs } from 'fs';
+import path from 'path';
 import { IPCChannel, ILogger } from './types';
 import { LoggerFactory } from './utils/logger';
 import { WindowManager } from './window-manager';
@@ -824,9 +826,7 @@ export class IPCHandlers {
     this.register({
       channel: IPCChannel.VAULT_MEDIA_LIST,
       handler: async () => {
-        const { promises: fs } = require('fs');
-        const path = require('path');
-        const mediaDir = path.join(require('electron').app.getPath('userData'), 'vault', 'media');
+        const mediaDir = path.join(app.getPath('userData'), 'vault', 'media');
         try {
           const files = await fs.readdir(mediaDir);
           const entries = [];
@@ -853,7 +853,7 @@ export class IPCHandlers {
     this.register({
       channel: IPCChannel.VAULT_MEDIA_OPEN,
       handler: async (_event, payload: { path: string }) => {
-        require('electron').shell.openPath(payload.path);
+        shell.openPath(payload.path);
         return { success: true };
       },
     });
@@ -862,7 +862,7 @@ export class IPCHandlers {
       channel: IPCChannel.VAULT_MEDIA_DELETE,
       handler: async (_event, payload: { path: string }) => {
         try {
-          await require('fs').promises.unlink(payload.path);
+          await fs.unlink(payload.path);
           return { success: true };
         } catch {
           return { success: false };
