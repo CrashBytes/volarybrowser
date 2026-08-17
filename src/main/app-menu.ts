@@ -8,9 +8,10 @@
  */
 
 import { Menu, app, BrowserWindow, shell, dialog } from 'electron';
+import * as path from 'path';
 import { TabManager } from './tab-manager';
 import { saveSession, listSessions, getSession } from '../../core/storage/repositories/sessions';
-import { getRecentHistory } from '../../core/storage/repositories/history';
+import { getRecentHistory, deleteAllHistory } from '../../core/storage/repositories/history';
 import { ILogger } from './types';
 import { LoggerFactory } from './utils/logger';
 
@@ -92,11 +93,6 @@ export class AppMenu {
             label: 'Save Session...',
             accelerator: 'CmdOrCtrl+Shift+S',
             click: async () => {
-              const result = await dialog.showInputBox?.(mainWindow, {
-                title: 'Save Session',
-                label: 'Session name:',
-              }).catch(() => null);
-              // dialog.showInputBox doesn't exist in Electron, use showMessageBox prompt
               const { response } = await dialog.showMessageBox(mainWindow, {
                 type: 'question',
                 title: 'Save Session',
@@ -120,10 +116,10 @@ export class AppMenu {
                 if (sessions.length === 0) {
                   return [{ label: 'No saved sessions', enabled: false }];
                 }
-                return sessions.slice(0, 10).map((s: any) => ({
+                return sessions.slice(0, 10).map((s: Record<string, unknown>) => ({
                   label: `${s.name} (${s.tab_count} tabs)`,
                   click: async () => {
-                    const session = getSession(s.id);
+                    const session = getSession(s.id as string);
                     if (session) {
                       for (const tab of session.tabs) {
                         await this.tabManager.createTab({ url: tab.url, active: false });
@@ -266,12 +262,12 @@ export class AppMenu {
             try {
               const recent = getRecentHistory(10);
               if (recent.length === 0) return [{ label: 'No history yet', enabled: false }];
-              return recent.map((entry: any) => {
-                const domain = (() => { try { return new URL(entry.url).hostname; } catch { return entry.url; } })();
-                const label = entry.title ? `${entry.title.slice(0, 40)} — ${domain}` : domain;
+              return recent.map((entry: Record<string, unknown>) => {
+                const domain = (() => { try { return new URL(entry.url as string).hostname; } catch { return entry.url as string; } })();
+                const label = entry.title ? `${(entry.title as string).slice(0, 40)} — ${domain}` : domain;
                 return {
                   label,
-                  click: () => this.tabManager.navigate(entry.url),
+                  click: () => this.tabManager.navigate(entry.url as string),
                 };
               });
             } catch {
@@ -290,7 +286,6 @@ export class AppMenu {
                 defaultId: 0,
               });
               if (response === 1) {
-                const { deleteAllHistory } = require('../../core/storage/repositories/history');
                 deleteAllHistory();
               }
             },
@@ -331,7 +326,7 @@ export class AppMenu {
           {
             label: 'Saved Media (Vault)',
             click: () => {
-              const mediaDir = require('path').join(app.getPath('userData'), 'vault', 'media');
+              const mediaDir = path.join(app.getPath('userData'), 'vault', 'media');
               shell.openPath(mediaDir);
             },
           },

@@ -6,7 +6,7 @@
  * @module context-menu
  */
 
-import { Menu, MenuItem, BrowserView, clipboard, shell, dialog, app, net } from 'electron';
+import { Menu, MenuItem, BrowserView, clipboard, dialog, app } from 'electron';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { TabManager } from './tab-manager';
