@@ -35,7 +35,7 @@ export const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
   // Load saved Ollama settings
   useEffect(() => {
     if (!window.volary) return;
-    window.volary.settings.getAll().then((all: any) => {
+    window.volary.settings.getAll().then((all: { ollamaUrl?: string; ollamaModel?: string }) => {
       if (all.ollamaUrl) setOllamaUrl(all.ollamaUrl as string);
       if (all.ollamaModel) setModel(all.ollamaModel as string);
     }).catch(() => {});
@@ -80,7 +80,7 @@ export const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
         content: data.message?.content || 'No response',
       };
       setMessages([...updated, assistantMsg]);
-    } catch (err) {
+    } catch (_err) {
       setError(
         `Cannot reach Ollama at ${ollamaUrl}. Make sure Ollama is running and accessible.`
       );

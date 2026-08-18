@@ -42,7 +42,6 @@ import {
   tabSwitchSchema,
   tabUpdateBoundsSchema,
   historySearchSchema,
-  historyGetRecentSchema,
   historyDeleteSchema,
   bookmarkCreateSchema,
   bookmarkDeleteSchema,
@@ -422,7 +421,7 @@ export class IPCHandlers {
     // Vault lock
     this.register({
       channel: IPCChannel.VAULT_LOCK,
-      handler: async (event) => {
+      handler: async (_event) => {
         this.logger.info('Vault lock requested');
         
         const result = this.vaultManager.lock();

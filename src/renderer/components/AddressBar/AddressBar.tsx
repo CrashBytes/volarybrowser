@@ -45,8 +45,8 @@ export const AddressBar: React.FC<AddressBarProps> = ({
 
   // Load toolbar states on mount and listen for bookmark toggle from menu
   useEffect(() => {
-    window.volary?.darkMode?.getStatus().then((r: any) => setDarkModeActive(r?.enabled ?? false)).catch(() => {});
-    window.volary?.colorblind?.getStatus().then((r: any) => setColorblindLabel(r?.label ?? 'Off')).catch(() => {});
+    window.volary?.darkMode?.getStatus().then((r: { enabled?: boolean }) => setDarkModeActive(r?.enabled ?? false)).catch(() => {});
+    window.volary?.colorblind?.getStatus().then((r: { label?: string }) => setColorblindLabel(r?.label ?? 'Off')).catch(() => {});
 
     const handleMenuBookmark = () => toggleBookmark();
     window.addEventListener('volary:toggle-bookmark', handleMenuBookmark);
