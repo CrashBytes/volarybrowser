@@ -3,6 +3,11 @@ import { defineConfig } from 'vitest/config'
 export default defineConfig({
   test: {
     include: ['__tests__/**/*.test.ts'],
-    singleThread: true,
+    pool: 'threads',
+    poolOptions: {
+      threads: {
+        singleThread: true,
+      },
+    },
   },
 })
