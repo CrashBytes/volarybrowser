@@ -174,7 +174,7 @@ export class TabManager {
     // Destroy the webContents
     const wc = tab.view?.webContents;
     if (wc && !wc.isDestroyed()) {
-      (wc as any).destroy?.();
+      wc.destroy();
     }
     this.tabs.delete(tabId);
 
@@ -429,7 +429,7 @@ export class TabManager {
           this.window.removeBrowserView(tab.view);
         }
         if (tab.view?.webContents && !tab.view.webContents.isDestroyed()) {
-          (tab.view.webContents as any).destroy?.();
+          tab.view.webContents.destroy();
         }
       } catch { /* already destroyed */ }
     }

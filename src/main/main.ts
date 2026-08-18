@@ -576,7 +576,7 @@ if (!gotTheLock) {
   app.quit();
 } else {
   // We are the primary instance
-  app.on('second-instance', (event, commandLine, workingDirectory) => {
+  app.on('second-instance', (_event, _commandLine, _workingDirectory) => {
     // User tried to run a second instance - focus existing window
     const mainWindow = BrowserWindow.getAllWindows()[0];
     if (mainWindow) {
@@ -603,7 +603,7 @@ process.on('uncaughtException', (error) => {
   process.exit(1);
 });
 
-process.on('unhandledRejection', (reason, promise) => {
+process.on('unhandledRejection', (reason, _promise) => {
   console.error('Unhandled Promise Rejection:', reason);
   // In production, log to monitoring service
 });
