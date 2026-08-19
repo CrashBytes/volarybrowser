@@ -4,7 +4,11 @@ import path from 'path'
 export default defineConfig({
   test: {
     include: ['__tests__/**/*.test.ts'],
-    pool: 'forks',
-    singleFork: true,
+    pool: 'threads',
+    poolOptions: {
+      threads: {
+        singleThread: true,
+      },
+    },
   },
 })
