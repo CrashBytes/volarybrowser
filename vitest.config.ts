@@ -4,7 +4,7 @@ import path from 'path'
 export default defineConfig({
   test: {
     include: ['__tests__/**/*.test.ts'],
-    pool: 'node',
+    pool: 'vmThreads',
     alias: {
       'better-sqlite3-multiple-ciphers': path.resolve(__dirname, 'test-mocks/better-sqlite3.ts'),
     },
