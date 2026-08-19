@@ -145,9 +145,11 @@ export function runMigrations(db: Database.Database): void {
     );
   `);
 
-  const currentVersion = db.prepare(
+  const row = db.prepare(
     'SELECT COALESCE(MAX(version), 0) as version FROM _migrations'
-  ).get() as { version: number };
+  ).get() as { version: number } | undefined;
+
+  const currentVersion = row ?? { version: 0 };
 
   for (const migration of migrations) {
     if (migration.version <= currentVersion.version) continue;
