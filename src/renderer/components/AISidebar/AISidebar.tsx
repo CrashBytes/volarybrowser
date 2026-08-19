@@ -80,7 +80,7 @@ export const AISidebar: React.FC<AISidebarProps> = ({ isOpen, onClose }) => {
         content: data.message?.content || 'No response',
       };
       setMessages([...updated, assistantMsg]);
-    } catch (_err) {
+    } catch {
       setError(
         `Cannot reach Ollama at ${ollamaUrl}. Make sure Ollama is running and accessible.`
       );
