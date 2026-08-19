@@ -19,7 +19,6 @@
     "dist:mac": "npm run build:standalone && electron-builder --mac",
     "dist:win": "npm run build:standalone && electron-builder --win",
     "dist:linux": "npm run build:standalone && electron-builder --linux",
-    "pretest": "npm rebuild better-sqlite3-multiple-ciphers --silent 2>/dev/null || true",
     "test": "vitest run",
     "test:unit": "vitest run --dir __tests__/unit",
     "test:integration": "vitest run --dir __tests__/integration",
