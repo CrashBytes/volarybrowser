@@ -3,7 +3,11 @@
 export default class Database {
   constructor() {}
   prepare() {
-    return { run: () => {}, get: () => {} }
+    return {
+      run: () => ({ lastInsertRowid: 1 }),
+      get: () => ({}),
+      all: () => []
+    }
   }
   exec() {}
   pragma() {}
