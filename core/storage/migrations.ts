@@ -154,13 +154,16 @@ export function runMigrations(db: Database.Database): void {
   for (const migration of migrations) {
     if (migration.version <= currentVersion.version) continue;
 
-    const transaction = db.transaction(() => {
+    db.exec('BEGIN');
+    try {
       db.exec(migration.up);
       db.prepare(
         'INSERT INTO _migrations (version, description) VALUES (?, ?)'
       ).run(migration.version, migration.description);
-    });
-
-    transaction();
+      db.exec('COMMIT');
+    } catch (error) {
+      db.exec('ROLLBACK');
+      throw error;
+    }
   }
 }
