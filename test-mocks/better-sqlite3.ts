@@ -6,5 +6,6 @@ export default class Database {
     return { run: () => {}, get: () => {} }
   }
   exec() {}
+  pragma() {}
   close() {}
 }
