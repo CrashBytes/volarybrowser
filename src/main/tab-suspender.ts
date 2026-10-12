@@ -71,7 +71,7 @@ export class TabSuspender {
     // Don't suspend if it's somehow the active tab
     if (tab && tab.state.id === tabId) return;
 
-    const managedTab = (this.tabManager as any).tabs?.get(tabId);
+    const managedTab = (this.tabManager as unknown as Record<string, Map<string, unknown>>).tabs?.get(tabId);
     if (managedTab && managedTab.view?.webContents && !managedTab.view.webContents.isDestroyed()) {
       const url = managedTab.state.url;
       // Load about:blank to free memory
