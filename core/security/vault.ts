@@ -365,7 +365,7 @@ export class Vault {
       const plaintext = decipher.decrypt(ciphertext);
       this.operationCount++;
       return Buffer.from(plaintext);
-    } catch (error) {
+    } catch {
       throw new Error('Decryption failed: data may be tampered');
     }
   }

@@ -18,7 +18,6 @@
 
 import { createHash, randomBytes } from 'crypto';
 import { readFileSync } from 'fs';
-import { join } from 'path';
 
 /**
  * Browser version following Semantic Versioning 2.0.0

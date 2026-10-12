@@ -23,7 +23,7 @@
  */
 
 import { app, powerMonitor } from 'electron';
-import { promises as fs } from 'fs';
+import { promises as fs, accessSync } from 'fs';
 import path from 'path';
 import { Vault, VaultStatus, AuthenticationLevel } from '../../../core/security/vault';
 import { ILogger } from '../types';
@@ -295,7 +295,7 @@ export class VaultManager {
    */
   private metadataExistsSync(): boolean {
     try {
-      require('fs').accessSync(this.metadataPath);
+      accessSync(this.metadataPath);
       return true;
     } catch {
       return false;

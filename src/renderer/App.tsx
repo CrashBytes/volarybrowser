@@ -126,7 +126,7 @@ export const App: React.FC = () => {
       setTabs(data.tabs, data.activeTabId);
     };
     const handleDownloadUpdate = (_event: unknown, downloads: unknown[]) => {
-      setDownloads(downloads as any);
+      setDownloads(downloads);
     };
     const handleBlockedCount = (_event: unknown, data: { count: number; urls: string[] }) => {
       setBlockedData(data.count, data.urls);
@@ -172,6 +172,7 @@ export const App: React.FC = () => {
     window.volary.on('translate:status', handleTranslateStatus);
     window.volary.on('toggle-bookmark', handleToggleBookmark);
 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     return () => {
       window.volary.off('vault:status-changed', handleVaultChange);
       window.volary.off('tab:updated', handleTabUpdate);

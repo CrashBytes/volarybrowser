@@ -1,7 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { BackIcon, ForwardIcon, ReloadIcon, StopIcon, LockIcon, UnlockIcon, ReaderIcon, MoonIcon, EyeIcon, BookmarkIcon, BookmarkFilledIcon, GearIcon, TranslateIcon } from '../../assets/icons/NavIcons';
 import { useBrowserStore } from '../../store/browser-store';
 import './AddressBar.css';
+
+interface BookmarkResult {
+  id?: string;
+}
 
 interface AddressBarProps {
   url: string;
@@ -53,13 +57,13 @@ export const AddressBar: React.FC<AddressBarProps> = ({
 
   // Load toolbar states on mount and listen for bookmark toggle from menu
   useEffect(() => {
-    window.volary?.darkMode?.getStatus().then((r: any) => setDarkModeActive(r?.enabled ?? false)).catch(() => {});
-    window.volary?.colorblind?.getStatus().then((r: any) => setColorblindLabel(r?.label ?? 'Off')).catch(() => {});
+    window.volary?.darkMode?.getStatus().then((r: { enabled?: boolean }) => setDarkModeActive(r?.enabled ?? false)).catch(() => {});
+    window.volary?.colorblind?.getStatus().then((r: { label?: string }) => setColorblindLabel(r?.label ?? 'Off')).catch(() => {});
 
     const handleMenuBookmark = () => toggleBookmark();
     window.addEventListener('volary:toggle-bookmark', handleMenuBookmark);
     return () => window.removeEventListener('volary:toggle-bookmark', handleMenuBookmark);
-  }, [url, isBookmarked]);
+  }, [toggleBookmark]);
 
   // Reset reader mode state when URL changes (navigating away exits reader)
   useEffect(() => {
@@ -77,11 +81,11 @@ export const AddressBar: React.FC<AddressBarProps> = ({
     }
   }, [url]);
 
-  const toggleBookmark = async () => {
+  const toggleBookmark = useCallback(async () => {
     if (!url) return;
     try {
       if (isBookmarked) {
-        const result = await window.volary.bookmarks.isBookmarked(url) as any;
+        const result = await window.volary.bookmarks.isBookmarked(url) as BookmarkResult;
         if (result?.id) {
           await window.volary.bookmarks.delete(result.id);
         }
@@ -96,7 +100,7 @@ export const AddressBar: React.FC<AddressBarProps> = ({
     } catch (err) {
       console.error('[AddressBar] Bookmark toggle failed:', err);
     }
-  };
+  }, [url, isBookmarked]);
 
   const fetchSuggestions = (query: string) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);

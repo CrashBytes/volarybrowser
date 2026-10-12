@@ -160,7 +160,6 @@ export class ExtensionManager {
 
     // Delete extension directory
     try {
-      const { promises: fs } = require('fs');
       await fs.rm(ext.path, { recursive: true, force: true });
     } catch (error) {
       this.logger.error('Failed to delete extension directory', error as Error);
