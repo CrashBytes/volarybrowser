@@ -485,6 +485,7 @@ const api = {
       'toggle-dark-mode',
       'toggle-bookmark',
       'toggle-bookmarks-bar',
+      'open-bookmark-manager',
       'set-colorblind',
     ];
 

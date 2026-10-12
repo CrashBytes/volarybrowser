@@ -19,6 +19,7 @@ import { FindBar } from './components/FindBar';
 import { DownloadBar } from './components/DownloadBar';
 import { NewTabPage } from './components/NewTabPage';
 import { BookmarkBar } from './components/BookmarkBar';
+import { BookmarkManager } from './components/BookmarkManager';
 import { Settings } from './components/Settings';
 import { AISidebar } from './components/AISidebar';
 import { useBrowserStore } from './store/browser-store';
@@ -46,6 +47,7 @@ export const App: React.FC = () => {
   const [bookmarkDialogOpen, setBookmarkDialogOpen] = React.useState(false);
   const [folderDropdownHeight, setFolderDropdownHeight] = React.useState(0);
   const [settingsOpen, setSettingsOpen] = React.useState(false);
+  const [bookmarkManagerOpen, setBookmarkManagerOpen] = React.useState(false);
   const [settingsSection, setSettingsSection] = React.useState<string | undefined>();
   const [aiSidebarOpen, setAiSidebarOpen] = React.useState(false);
   const [highContrast, setHighContrast] = React.useState(false);
@@ -67,6 +69,7 @@ export const App: React.FC = () => {
     || tabContextMenuOpen
     || bookmarkDialogOpen
     || settingsOpen
+    || bookmarkManagerOpen
     || (activeTab != null && !activeTab.url);
 
   /**
@@ -150,6 +153,9 @@ export const App: React.FC = () => {
       setSettingsOpen(true);
     };
     window.addEventListener('volary:open-settings', handleOpenSettingsDOM);
+    const handleOpenBookmarkManager = () => setBookmarkManagerOpen(true);
+    window.addEventListener('volary:open-bookmark-manager', handleOpenBookmarkManager);
+    window.volary.on('open-bookmark-manager', handleOpenBookmarkManager);
 
     window.volary.on('vault:status-changed', handleVaultChange);
     window.volary.on('tab:updated', handleTabUpdate);
@@ -173,6 +179,8 @@ export const App: React.FC = () => {
       window.volary.off('toggle-reading-mode', handleToggleReading);
       window.volary.off('toggle-bookmark', handleToggleBookmark);
       window.removeEventListener('volary:open-settings', handleOpenSettingsDOM);
+      window.removeEventListener('volary:open-bookmark-manager', handleOpenBookmarkManager);
+      window.volary.off('open-bookmark-manager', handleOpenBookmarkManager);
     };
   }, []);
 
@@ -441,6 +449,12 @@ export const App: React.FC = () => {
           setSettingsOpen(false);
           loadAccessibilitySettings(); // Reload settings that affect the chrome
         }}
+      />
+
+      {/* Bookmark Manager */}
+      <BookmarkManager
+        isOpen={bookmarkManagerOpen}
+        onClose={() => setBookmarkManagerOpen(false)}
       />
 
       {/* Vault Modals */}

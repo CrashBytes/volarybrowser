@@ -100,6 +100,21 @@ interface VolaryAPI {
   ): void;
 
   /**
+   * Bookmarks API (ids 1 and 2 are the Bookmarks Bar and Other Bookmarks roots)
+   */
+  bookmarks: {
+    create(parentId: number, title: string, url: string | null, isFolder?: boolean): Promise<number>;
+    delete(id: number): Promise<unknown>;
+    update(id: number, title?: string, url?: string): Promise<unknown>;
+    /** Places the item before whatever currently sits at newPosition in newParentId. */
+    move(id: number, newParentId: number, newPosition: number): Promise<unknown>;
+    getTree(rootId: number): Promise<BookmarkNode | null>;
+    getChildren(parentId: number): Promise<BookmarkNode[]>;
+    isBookmarked(url: string): Promise<BookmarkNode | null>;
+    search(query: string, limit?: number): Promise<BookmarkNode[]>;
+  };
+
+  /**
    * System Information API
    * 
    * Access to non-sensitive system metadata
@@ -116,6 +131,17 @@ interface VolaryAPI {
  * 
  * Additional debugging utilities exposed in development builds
  */
+interface BookmarkNode {
+  id: number;
+  parentId: number | null;
+  title: string;
+  url: string | null;
+  position: number;
+  isFolder: boolean;
+  createdAt: number;
+  children?: BookmarkNode[];
+}
+
 interface DevToolsAPI {
   logToMain(message: string, data?: unknown): void;
   getMetrics(): Promise<unknown>;

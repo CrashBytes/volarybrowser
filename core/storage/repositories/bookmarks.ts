@@ -98,7 +98,47 @@ export function updateBookmark(id: number, title?: string, url?: string): void {
  */
 export function moveBookmark(id: number, newParentId: number, newPosition: number): void {
   const db = getDatabase();
-  db.prepare('UPDATE bookmarks SET parent_id = ?, position = ? WHERE id = ?').run(newParentId, newPosition, id);
+  // Root folders stay put.
+  if (id <= 2) return;
+
+  const item = db.prepare('SELECT id, parent_id FROM bookmarks WHERE id = ?')
+    .get(id) as { id: number; parent_id: number | null } | undefined;
+  const target = db.prepare('SELECT id, is_folder FROM bookmarks WHERE id = ?')
+    .get(newParentId) as { id: number; is_folder: number } | undefined;
+  if (!item || !target || target.is_folder !== 1) return;
+
+  // A folder can't go inside itself or one of its descendants: the subtree
+  // would detach from the roots and disappear from every view.
+  let cursor: number | null = newParentId;
+  while (cursor !== null) {
+    if (cursor === id) return;
+    const row = db.prepare('SELECT parent_id FROM bookmarks WHERE id = ?')
+      .get(cursor) as { parent_id: number | null } | undefined;
+    cursor = row?.parent_id ?? null;
+  }
+
+  const siblingIds = (parentId: number): number[] =>
+    (db.prepare('SELECT id FROM bookmarks WHERE parent_id = ? ORDER BY position, id')
+      .all(parentId) as { id: number }[]).map(r => r.id);
+  const renumber = db.prepare('UPDATE bookmarks SET parent_id = ?, position = ? WHERE id = ?');
+
+  db.transaction(() => {
+    // newPosition means "before the item currently at that index" in the
+    // target folder, which is what drag-and-drop targets report. Moving down
+    // within the same folder shifts that index by one once the item is lifted.
+    const target = siblingIds(newParentId);
+    const oldIndex = item.parent_id === newParentId ? target.indexOf(id) : -1;
+    let index = Math.max(0, Math.floor(newPosition));
+    if (oldIndex !== -1 && oldIndex < index) index -= 1;
+
+    const remaining = target.filter(x => x !== id);
+    remaining.splice(Math.min(index, remaining.length), 0, id);
+    remaining.forEach((x, pos) => renumber.run(newParentId, pos, x));
+
+    if (item.parent_id !== null && item.parent_id !== newParentId) {
+      siblingIds(item.parent_id).forEach((x, pos) => renumber.run(item.parent_id, pos, x));
+    }
+  })();
 }
 
 /**

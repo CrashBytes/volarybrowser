@@ -333,10 +333,27 @@ export const BookmarkBar: React.FC<BookmarkBarProps> = ({ onDialogChange, onFold
       setDropTarget({ kind: 'folder', id: bookmark.id });
     } else {
       // Drop before this sibling at its current position
+      // move() expects the sibling's index, not its stored position field,
+      // which can have gaps in older data.
       const parentId = findParentId(bookmark.id) ?? 1;
-      const position = bookmark.position ?? 0;
+      const siblings = parentId === 1 ? bookmarks : findFolder(parentId)?.children ?? [];
+      const position = Math.max(0, siblings.findIndex((s) => s.id === bookmark.id));
       setDropTarget({ kind: 'before', parentId, position, siblingId: bookmark.id });
     }
+  };
+
+  const findFolder = (folderId: number): Bookmark | null => {
+    const walk = (list: Bookmark[]): Bookmark | null => {
+      for (const bm of list) {
+        if (bm.id === folderId) return bm;
+        if (bm.children) {
+          const found = walk(bm.children);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+    return walk(bookmarks);
   };
 
   const findParentId = (bookmarkId: number): number | null => {
@@ -520,6 +537,15 @@ export const BookmarkBar: React.FC<BookmarkBarProps> = ({ onDialogChange, onFold
             onClick={handleCreateFolder}
           >
             New Folder
+          </button>
+          <button
+            className="bookmark-bar__context-item"
+            onClick={() => {
+              setContextMenu(null);
+              window.dispatchEvent(new CustomEvent('volary:open-bookmark-manager'));
+            }}
+          >
+            Bookmark Manager…
           </button>
           {contextMenu.bookmark && (
             <>
