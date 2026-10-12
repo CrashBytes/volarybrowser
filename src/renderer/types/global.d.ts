@@ -145,7 +145,7 @@ interface VolaryAPI {
    * Bookmarks API (ids 1 and 2 are the Bookmarks Bar and Other Bookmarks roots)
    */
   bookmarks: {
-    create(parentId: number, title: string, url: string | null, isFolder?: boolean): Promise<number>;
+    create(parentId: number, title: string, url: string | null, isFolder?: boolean): Promise<{ success: boolean; id: number }>;
     delete(id: number): Promise<unknown>;
     update(id: number, title?: string, url?: string): Promise<unknown>;
     /** Places the item before whatever currently sits at newPosition in newParentId. */
