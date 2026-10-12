@@ -124,3 +124,8 @@ export const findStartSchema = z.object({
 export function zodValidator<T>(schema: z.ZodType<T>): (payload: unknown) => payload is T {
   return (payload: unknown): payload is T => schema.safeParse(payload).success;
 }
+
+// Vault media
+export const vaultMediaIdSchema = z.object({
+  id: z.string().uuid(),
+});

@@ -21,11 +21,12 @@
  * @module ipc-handlers
  */
 
-import { ipcMain, BrowserWindow, IpcMainInvokeEvent } from 'electron';
+import { ipcMain, BrowserWindow, IpcMainInvokeEvent, dialog } from 'electron';
 import { IPCChannel, ILogger } from './types';
 import { LoggerFactory } from './utils/logger';
 import { WindowManager } from './window-manager';
 import { VaultManager } from './security/vault-manager';
+import { VaultLockedError } from './security/media-vault';
 import { TabManager } from './tab-manager';
 import { HistoryManager } from './history-manager';
 import { DownloadManager } from './download-manager';
@@ -57,6 +58,7 @@ import {
   translateSiteSchema,
   translateLangSchema,
   findStartSchema,
+  vaultMediaIdSchema,
   zodValidator,
 } from './schemas/ipc-schemas';
 import {
@@ -894,53 +896,70 @@ export class IPCHandlers {
   // -- Vault Media --
 
   private registerVaultMediaHandlers(): void {
+    // All media is encrypted with the vault key. Every handler answers
+    // { locked: true } instead of touching data while the vault is locked.
+    const media = () => this.vaultManager.getMediaVault();
+    const lockedResult = { success: false, locked: true, message: 'Vault is locked' };
+
     this.register({
       channel: IPCChannel.VAULT_MEDIA_LIST,
       handler: async () => {
-        const { promises: fs } = require('fs');
-        const path = require('path');
-        const mediaDir = path.join(require('electron').app.getPath('userData'), 'vault', 'media');
         try {
-          const files = await fs.readdir(mediaDir);
-          const entries = [];
-          for (const file of files) {
-            const filePath = path.join(mediaDir, file);
-            const stat = await fs.stat(filePath);
-            const ext = path.extname(file).toLowerCase();
-            const isVideo = ['.mp4', '.webm', '.ogg', '.mov'].includes(ext);
-            entries.push({
-              name: file,
-              path: filePath,
-              size: stat.size,
-              type: isVideo ? 'video' : 'image',
-              savedAt: stat.mtimeMs,
-            });
-          }
-          return entries.sort((a: any, b: any) => b.savedAt - a.savedAt);
-        } catch {
-          return [];
+          return { success: true, locked: false, items: await media().list() };
+        } catch (error) {
+          if (error instanceof VaultLockedError) return { ...lockedResult, items: [] };
+          throw error;
         }
       },
     });
 
     this.register({
-      channel: IPCChannel.VAULT_MEDIA_OPEN,
-      handler: async (_event, payload: { path: string }) => {
-        require('electron').shell.openPath(payload.path);
-        return { success: true };
+      channel: IPCChannel.VAULT_MEDIA_READ,
+      handler: async (_event, payload: { id: string }) => {
+        try {
+          const { entry, bytes } = await media().read(payload.id);
+          return { success: true, locked: false, entry, data: new Uint8Array(bytes) };
+        } catch (error) {
+          if (error instanceof VaultLockedError) return lockedResult;
+          throw error;
+        }
       },
+      validator: zodValidator(vaultMediaIdSchema),
+    });
+
+    this.register({
+      channel: IPCChannel.VAULT_MEDIA_EXPORT,
+      handler: async (event, payload: { id: string }) => {
+        try {
+          const store = media();
+          const entry = (await store.list()).find((e) => e.id === payload.id);
+          if (!entry) return { success: false, locked: false, message: 'Not found' };
+
+          const owner = BrowserWindow.fromWebContents(event.sender);
+          const options = { defaultPath: entry.name, title: 'Export decrypted copy' };
+          const result = owner
+            ? await dialog.showSaveDialog(owner, options)
+            : await dialog.showSaveDialog(options);
+          if (result.canceled || !result.filePath) {
+            return { success: false, locked: false, message: 'Cancelled' };
+          }
+          await store.exportTo(payload.id, result.filePath);
+          return { success: true, locked: false, path: result.filePath };
+        } catch (error) {
+          if (error instanceof VaultLockedError) return lockedResult;
+          throw error;
+        }
+      },
+      validator: zodValidator(vaultMediaIdSchema),
     });
 
     this.register({
       channel: IPCChannel.VAULT_MEDIA_DELETE,
-      handler: async (_event, payload: { path: string }) => {
-        try {
-          await require('fs').promises.unlink(payload.path);
-          return { success: true };
-        } catch {
-          return { success: false };
-        }
+      handler: async (_event, payload: { id: string }) => {
+        if (!media().isUnlocked()) return lockedResult;
+        return { success: await media().delete(payload.id), locked: false };
       },
+      validator: zodValidator(vaultMediaIdSchema),
     });
   }
 

@@ -205,7 +205,8 @@ export enum IPCChannel {
 
   // Vault media
   VAULT_MEDIA_LIST = 'vault:media-list',
-  VAULT_MEDIA_OPEN = 'vault:media-open',
+  VAULT_MEDIA_READ = 'vault:media-read',
+  VAULT_MEDIA_EXPORT = 'vault:media-export',
   VAULT_MEDIA_DELETE = 'vault:media-delete',
 
   // Sessions

@@ -15,6 +15,7 @@ import { TabBar } from './components/TabBar';
 import { AddressBar } from './components/AddressBar';
 import { VaultInitialize } from './components/VaultInitialize';
 import { VaultUnlock } from './components/VaultUnlock';
+import { VaultMedia } from './components/VaultMedia';
 import { FindBar } from './components/FindBar';
 import { TranslateBar } from './components/TranslateBar';
 import { DownloadBar } from './components/DownloadBar';
@@ -51,6 +52,7 @@ export const App: React.FC = () => {
   const [settingsOpen, setSettingsOpen] = React.useState(false);
   const [settingsSection, setSettingsSection] = React.useState<string | undefined>();
   const [aiSidebarOpen, setAiSidebarOpen] = React.useState(false);
+  const [vaultMediaOpen, setVaultMediaOpen] = React.useState(false);
   const [highContrast, setHighContrast] = React.useState(false);
   const [reducedMotion, setReducedMotion] = React.useState(false);
   const [screenReaderMode, setScreenReaderMode] = React.useState(false);
@@ -70,6 +72,7 @@ export const App: React.FC = () => {
     || tabContextMenuOpen
     || bookmarkDialogOpen
     || settingsOpen
+    || vaultMediaOpen
     || (activeTab != null && !activeTab.url);
 
   /**
@@ -159,6 +162,11 @@ export const App: React.FC = () => {
       setSettingsOpen(true);
     };
     window.addEventListener('volary:open-settings', handleOpenSettingsDOM);
+    const handleOpenVaultMedia = () => setVaultMediaOpen(true);
+    // Context menu "Save to Vault" while locked, or the gallery's Unlock button
+    const handleRequestUnlock = () => setVaultStatus({ skipped: false });
+    window.volary.on('open-vault-media', handleOpenVaultMedia);
+    window.volary.on('vault:request-unlock', handleRequestUnlock);
 
     window.volary.on('vault:status-changed', handleVaultChange);
     window.volary.on('tab:updated', handleTabUpdate);
@@ -185,6 +193,8 @@ export const App: React.FC = () => {
       window.volary.off('translate:status', handleTranslateStatus);
       window.volary.off('toggle-bookmark', handleToggleBookmark);
       window.removeEventListener('volary:open-settings', handleOpenSettingsDOM);
+      window.volary.off('open-vault-media', handleOpenVaultMedia);
+      window.volary.off('vault:request-unlock', handleRequestUnlock);
     };
   }, []);
 
@@ -457,6 +467,14 @@ export const App: React.FC = () => {
           setSettingsOpen(false);
           loadAccessibilitySettings(); // Reload settings that affect the chrome
         }}
+      />
+
+      {/* Encrypted media gallery */}
+      <VaultMedia
+        isOpen={vaultMediaOpen}
+        isUnlocked={vaultStatus.isUnlocked}
+        onClose={() => setVaultMediaOpen(false)}
+        onRequestUnlock={() => setVaultStatus({ skipped: false })}
       />
 
       {/* Vault Modals */}

@@ -7,7 +7,7 @@
  * @module app-menu
  */
 
-import { Menu, app, BrowserWindow, shell, dialog } from 'electron';
+import { Menu, app, BrowserWindow, dialog } from 'electron';
 import { TabManager } from './tab-manager';
 import { saveSession, listSessions, getSession } from '../../core/storage/repositories/sessions';
 import { getRecentHistory } from '../../core/storage/repositories/history';
@@ -335,10 +335,7 @@ export class AppMenu {
           { type: 'separator' },
           {
             label: 'Saved Media (Vault)',
-            click: () => {
-              const mediaDir = require('path').join(app.getPath('userData'), 'vault', 'media');
-              shell.openPath(mediaDir);
-            },
+            click: () => send('open-vault-media'),
           },
           { type: 'separator' },
           {

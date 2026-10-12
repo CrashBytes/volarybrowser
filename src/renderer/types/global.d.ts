@@ -46,6 +46,18 @@ interface VolaryAPI {
   };
 
   /**
+   * Encrypted vault media. Every call answers { locked: true } while the vault is locked.
+   */
+  vaultMedia: {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    list(): Promise<{ success: boolean; locked: boolean; items: any[] }>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    read(id: string): Promise<{ success: boolean; locked: boolean; entry?: any; data?: Uint8Array }>;
+    export(id: string): Promise<{ success: boolean; locked: boolean; message?: string; path?: string }>;
+    delete(id: string): Promise<{ success: boolean; locked: boolean }>;
+  };
+
+  /**
    * Navigation API
    * 
    * Browser navigation controls

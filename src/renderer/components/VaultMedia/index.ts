@@ -1,0 +1,1 @@
+export { VaultMedia } from './VaultMedia';
