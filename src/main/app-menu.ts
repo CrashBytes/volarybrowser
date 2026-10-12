@@ -244,6 +244,11 @@ export class AppMenu {
             click: () => send('toggle-bookmark'),
           },
           {
+            label: 'Bookmark Manager',
+            accelerator: 'CmdOrCtrl+Alt+B',
+            click: () => send('open-bookmark-manager'),
+          },
+          {
             label: 'Show Bookmarks Bar',
             type: 'checkbox',
             checked: true,
