@@ -41,7 +41,6 @@ import {
   tabSwitchSchema,
   tabUpdateBoundsSchema,
   historySearchSchema,
-  historyGetRecentSchema,
   historyDeleteSchema,
   bookmarkCreateSchema,
   bookmarkDeleteSchema,
@@ -432,7 +431,7 @@ export class IPCHandlers {
     // Vault lock
     this.register({
       channel: IPCChannel.VAULT_LOCK,
-      handler: async (event) => {
+      handler: async (_event) => {
         this.logger.info('Vault lock requested');
         
         const result = this.vaultManager.lock();
@@ -448,7 +447,7 @@ export class IPCHandlers {
     // Vault status query
     this.register({
       channel: IPCChannel.VAULT_STATUS,
-      handler: async (event) => {
+      handler: async (_event) => {
         return this.vaultManager.getStatus();
       },
     });
@@ -819,7 +818,7 @@ export class IPCHandlers {
     this.register({
       channel: IPCChannel.COLORBLIND_SET,
       handler: async (_event, payload: { mode: string }) => {
-        this.colorblindMode.setMode(payload.mode as any);
+        this.colorblindMode.setMode(payload.mode);
         return { mode: this.colorblindMode.getMode(), label: this.colorblindMode.getLabel() };
       },
     });
