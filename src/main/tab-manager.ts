@@ -91,7 +91,35 @@ export class TabManager {
       this.repositionActiveView();
     });
 
+    // The tab BrowserViews are owned by this window: when it is destroyed
+    // their WebContents die with it. On macOS the app keeps running after the
+    // last window closes and a Dock click creates a fresh window, so forget
+    // the dead window and its tabs here or every later createTab() fails with
+    // "No window available" and navigate() dereferences a destroyed view.
+    window.once('closed', () => {
+      if (this.window !== window) return; // already re-attached elsewhere
+      this.detachWindow();
+    });
+
     this.logger.info('TabManager attached to window');
+  }
+
+  /**
+   * Forget the current window and every tab that lived in it.
+   */
+  private detachWindow(): void {
+    for (const [, tab] of this.tabs) {
+      try {
+        const wc = tab.view?.webContents;
+        if (wc && !wc.isDestroyed()) {
+          (wc as any).destroy?.();
+        }
+      } catch { /* already destroyed */ }
+    }
+    this.tabs.clear();
+    this.activeTabId = null;
+    this.window = null;
+    this.logger.info('TabManager detached from closed window');
   }
 
   /**
