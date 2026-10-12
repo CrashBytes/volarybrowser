@@ -16,8 +16,10 @@
 
 export const PAGE_STATE_KEY = '__volaryTranslate';
 
-/** Largest number of segments collected from one page */
-export const MAX_SEGMENTS_PER_PAGE = 6000;
+/** Largest number of segments collected in one pass (the rest follows on the next poll) */
+export const MAX_SEGMENTS_PER_PASS = 6000;
+/** Hard ceiling on tracked segments per page, so endless feeds cannot grow memory forever */
+export const MAX_SEGMENTS_PER_PAGE = 20000;
 
 /** Elements whose subtree is never translated */
 const SKIP_TAGS = [
@@ -127,7 +129,8 @@ export const COLLECT_SCRIPT = `
   S.dirty = false;
 
   const segments = [];
-  const limit = ${MAX_SEGMENTS_PER_PAGE};
+  const passLimit = ${MAX_SEGMENTS_PER_PASS};
+  const hardCap = ${MAX_SEGMENTS_PER_PAGE};
 
   if (!S.titleSent && meaningful(document.title)) {
     S.titleOriginal = document.title;
@@ -142,9 +145,10 @@ export const COLLECT_SCRIPT = `
     },
   });
   let n;
-  while ((n = walker.nextNode()) && S.nodes.size < limit) {
-    S.seen.add(n);
+  while (segments.length < passLimit && (n = walker.nextNode())) {
     let key = S.keys.get(n);
+    if (!key && S.nodes.size >= hardCap) break;
+    S.seen.add(n);
     if (!key) {
       key = 'n' + (S.nextId++);
       S.keys.set(n, key);
@@ -159,12 +163,13 @@ export const COLLECT_SCRIPT = `
     ['input[placeholder], textarea[placeholder]', 'placeholder'],
     ['img[alt]', 'alt'],
     ['input[type="submit"][value], input[type="button"][value], input[type="reset"][value]', 'value'],
-    ['a[title], button[title], img[title], abbr[title], span[title], div[title], li[title]', 'title'],
+    // Link titles are skipped on purpose: reference-heavy pages carry thousands of them
+    ['button[title], img[title], abbr[title], input[title]', 'title'],
   ];
   for (const [selector, name] of ATTR_SELECTORS) {
     const els = document.querySelectorAll(selector);
     for (const el of els) {
-      if (S.nodes.size + S.attrs.size >= limit) break;
+      if (segments.length >= passLimit || S.attrs.size >= hardCap) break;
       const marker = el; // seen is keyed per element+attribute via a data flag
       const flag = 'volaryTx' + name;
       if (marker.dataset && marker.dataset[flag] === '1') continue;
@@ -180,6 +185,8 @@ export const COLLECT_SCRIPT = `
     }
   }
 
+  // Left-overs beyond the pass limit are picked up by the next pass
+  if (segments.length >= passLimit) S.dirty = true;
   return { segments: segments, total: S.nodes.size + S.attrs.size };
 })();
 `;
