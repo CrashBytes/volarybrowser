@@ -22,6 +22,11 @@ module.exports = merge(common, {
   target: 'web',
   resolve: {
     fallback: {
+      // Exact entry first: webpack-dev-server's ESM client imports
+      // 'process/browser' without an extension, which ESM resolution rejects,
+      // so it falls through to these fallbacks. The bare 'process' key matches
+      // by prefix and would rewrite it to '.../process/browser.js/browser'.
+      'process/browser': require.resolve('process/browser'),
       process: require.resolve('process/browser'),
     },
   },
