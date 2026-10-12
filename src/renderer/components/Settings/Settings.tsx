@@ -10,6 +10,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
+import { LANGUAGES, TARGET_LANGUAGE_CODES, languageName } from '../../../shared/translation';
 import './Settings.css';
 
 interface SettingsProps {
@@ -18,7 +19,7 @@ interface SettingsProps {
   onClose: () => void;
 }
 
-type Section = 'general' | 'privacy' | 'appearance' | 'accessibility' | 'shortcuts';
+type Section = 'general' | 'translation' | 'privacy' | 'appearance' | 'accessibility' | 'shortcuts';
 
 interface SettingValues {
   searchEngine: string;
@@ -37,6 +38,14 @@ interface SettingValues {
   reducedMotion: boolean;
   highContrast: boolean;
   screenReaderOptimized: boolean;
+  translateMode: string;
+  translateTargetLang: string;
+  translateProvider: string;
+  translateLibreUrl: string;
+  translateLibreApiKey: string;
+  translateNeverSites: string[];
+  translateAlwaysLangs: string[];
+  translateNeverLangs: string[];
 }
 
 const DEFAULT_SETTINGS: SettingValues = {
@@ -56,10 +65,19 @@ const DEFAULT_SETTINGS: SettingValues = {
   reducedMotion: false,
   highContrast: false,
   screenReaderOptimized: false,
+  translateMode: 'off',
+  translateTargetLang: 'en',
+  translateProvider: 'google',
+  translateLibreUrl: 'https://libretranslate.com',
+  translateLibreApiKey: '',
+  translateNeverSites: [],
+  translateAlwaysLangs: [],
+  translateNeverLangs: [],
 };
 
 const SECTIONS: { id: Section; label: string; icon: string }[] = [
   { id: 'general', label: 'General', icon: '⚙️' },
+  { id: 'translation', label: 'Translation', icon: '🌐' },
   { id: 'privacy', label: 'Privacy & Security', icon: '🛡️' },
   { id: 'appearance', label: 'Appearance', icon: '🎨' },
   { id: 'accessibility', label: 'Accessibility', icon: '♿' },
@@ -79,6 +97,7 @@ const SHORTCUTS = [
   { keys: 'Cmd+-', action: 'Zoom out' },
   { keys: 'Cmd+0', action: 'Reset zoom' },
   { keys: 'Cmd+Shift+R', action: 'Reading mode' },
+  { keys: 'Cmd+Shift+T', action: 'Translate page / show original' },
   { keys: 'Cmd+P', action: 'Print' },
   { keys: 'Cmd+,', action: 'Settings' },
   { keys: 'Cmd+Option+I', action: 'Developer tools' },
@@ -137,6 +156,14 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, initialSection, onCl
         reducedMotion: (all.reducedMotion as boolean) || false,
         highContrast: (all.highContrast as boolean) || false,
         screenReaderOptimized: (all.screenReaderOptimized as boolean) || false,
+        translateMode: (all.translateMode as string) || 'off',
+        translateTargetLang: (all.translateTargetLang as string) || 'en',
+        translateProvider: (all.translateProvider as string) || 'google',
+        translateLibreUrl: (all.translateLibreUrl as string) || 'https://libretranslate.com',
+        translateLibreApiKey: (all.translateLibreApiKey as string) || '',
+        translateNeverSites: asStringList(all.translateNeverSites),
+        translateAlwaysLangs: asStringList(all.translateAlwaysLangs),
+        translateNeverLangs: asStringList(all.translateNeverLangs),
       }));
     } catch {
       // Use defaults
@@ -229,6 +256,126 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, initialSection, onCl
                     checked={settings.httpsOnly}
                     onChange={v => updateSetting('httpsOnly', v)}
                     label="HTTPS-Only Mode"
+                  />
+                </div>
+              </div>
+            )}
+
+            {activeSection === 'translation' && (
+              <div className="settings-section">
+                <h2 className="settings-section-title">Translation</h2>
+                <p className="settings-section-description">
+                  Translate pages written in other languages into {languageName(settings.translateTargetLang) ?? 'English'}.
+                  Page text is sent to the translation service you pick below. Nothing leaves the browser while this is off.
+                </p>
+
+                <div className="setting-item">
+                  <label className="setting-label" htmlFor="translate-mode">Translate Pages</label>
+                  <p className="setting-description">What happens when a page is not in your language</p>
+                  <select
+                    id="translate-mode"
+                    className="setting-select"
+                    value={settings.translateMode}
+                    onChange={e => updateSetting('translateMode', e.target.value)}
+                  >
+                    <option value="off">Off</option>
+                    <option value="ask">Offer to translate (show a bar)</option>
+                    <option value="auto">Always translate automatically</option>
+                  </select>
+                </div>
+
+                <div className="setting-item">
+                  <label className="setting-label" htmlFor="translate-target">Translate Into</label>
+                  <select
+                    id="translate-target"
+                    className="setting-select"
+                    value={settings.translateTargetLang}
+                    onChange={e => updateSetting('translateTargetLang', e.target.value)}
+                  >
+                    {TARGET_LANGUAGE_CODES.map(code => (
+                      <option key={code} value={code}>{LANGUAGES[code]}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="setting-item">
+                  <label className="setting-label" htmlFor="translate-provider">Translation Service</label>
+                  <p className="setting-description">Google Translate needs no account. LibreTranslate can point at a server you run yourself.</p>
+                  <select
+                    id="translate-provider"
+                    className="setting-select"
+                    value={settings.translateProvider}
+                    onChange={e => updateSetting('translateProvider', e.target.value)}
+                  >
+                    <option value="google">Google Translate (no account needed)</option>
+                    <option value="libretranslate">LibreTranslate (self-hosted or hosted)</option>
+                  </select>
+                </div>
+
+                {settings.translateProvider === 'libretranslate' && (
+                  <>
+                    <div className="setting-item">
+                      <label className="setting-label" htmlFor="translate-libre-url">LibreTranslate Server URL</label>
+                      <input
+                        id="translate-libre-url"
+                        type="url"
+                        className="setting-input"
+                        value={settings.translateLibreUrl}
+                        placeholder="https://libretranslate.com"
+                        spellCheck={false}
+                        onChange={e => setSettings(prev => ({ ...prev, translateLibreUrl: e.target.value }))}
+                        onBlur={e => updateSetting('translateLibreUrl', e.target.value.trim() || 'https://libretranslate.com')}
+                      />
+                    </div>
+                    <div className="setting-item">
+                      <label className="setting-label" htmlFor="translate-libre-key">LibreTranslate API Key</label>
+                      <p className="setting-description">Required by libretranslate.com; optional on most self-hosted servers</p>
+                      <input
+                        id="translate-libre-key"
+                        type="password"
+                        className="setting-input"
+                        value={settings.translateLibreApiKey}
+                        autoComplete="off"
+                        onChange={e => setSettings(prev => ({ ...prev, translateLibreApiKey: e.target.value }))}
+                        onBlur={e => updateSetting('translateLibreApiKey', e.target.value.trim())}
+                      />
+                    </div>
+                  </>
+                )}
+
+                <div className="setting-item">
+                  <label className="setting-label">Always Translate These Languages</label>
+                  <p className="setting-description">Added from the translation bar with &quot;Always translate&quot;. Pages in these languages are translated without asking.</p>
+                  <ChipList
+                    items={settings.translateAlwaysLangs}
+                    render={code => languageName(code) ?? code}
+                    emptyText="None yet"
+                    removeLabel="Stop always translating"
+                    onRemove={code => updateSetting('translateAlwaysLangs', settings.translateAlwaysLangs.filter(c => c !== code))}
+                  />
+                </div>
+
+                <div className="setting-item">
+                  <label className="setting-label">Never Translate These Languages</label>
+                  <p className="setting-description">Pages in these languages are never offered for translation</p>
+                  <ChipList
+                    items={settings.translateNeverLangs}
+                    render={code => languageName(code) ?? code}
+                    emptyText="None yet"
+                    removeLabel="Allow translating"
+                    onRemove={code => updateSetting('translateNeverLangs', settings.translateNeverLangs.filter(c => c !== code))}
+                  />
+                </div>
+
+                <div className="setting-item">
+                  <label className="setting-label">Never Translate These Sites</label>
+                  <p className="setting-description">Added from the translation bar with &quot;Never translate this site&quot;</p>
+                  <ChipList
+                    items={settings.translateNeverSites}
+                    render={host => host}
+                    emptyText="None yet"
+                    removeLabel="Allow translating"
+                    onRemove={host => updateSetting('translateNeverSites', settings.translateNeverSites.filter(h => h !== host))}
                   />
                 </div>
               </div>
@@ -471,6 +618,43 @@ export const Settings: React.FC<SettingsProps> = ({ isOpen, initialSection, onCl
         </div>
       </div>
     </div>
+  );
+};
+
+/** Coerce a stored setting into a clean string list */
+const asStringList = (value: unknown): string[] =>
+  Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string' && v.length > 0) : [];
+
+/**
+ * Removable list of short values (languages, hosts)
+ */
+const ChipList: React.FC<{
+  items: string[];
+  render: (item: string) => string;
+  emptyText: string;
+  removeLabel: string;
+  onRemove: (item: string) => void;
+}> = ({ items, render, emptyText, removeLabel, onRemove }) => {
+  if (items.length === 0) {
+    return <p className="setting-chip-empty">{emptyText}</p>;
+  }
+  return (
+    <ul className="setting-chip-list">
+      {items.map(item => (
+        <li key={item} className="setting-chip">
+          <span>{render(item)}</span>
+          <button
+            type="button"
+            className="setting-chip__remove"
+            onClick={() => onRemove(item)}
+            aria-label={`${removeLabel}: ${render(item)}`}
+            title={removeLabel}
+          >
+            &times;
+          </button>
+        </li>
+      ))}
+    </ul>
   );
 };
 

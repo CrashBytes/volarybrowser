@@ -1,0 +1,135 @@
+.translate-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 10px;
+  background: var(--bg-secondary, #2a2a2a);
+  border-bottom: 1px solid var(--border-color, #3a3a3a);
+  font-size: 13px;
+  color: var(--text-primary, #e0e0e0);
+}
+
+.translate-bar--error {
+  background: #3a2626;
+}
+
+.translate-bar--translated {
+  background: #23302a;
+}
+
+.translate-bar__icon {
+  display: inline-flex;
+  color: var(--accent-color, #6366f1);
+}
+
+.translate-bar__message {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.translate-bar__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.translate-bar__btn {
+  background: transparent;
+  border: 1px solid var(--border-color, #3a3a3a);
+  color: var(--text-primary, #e0e0e0);
+  cursor: pointer;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-family: inherit;
+  border-radius: 4px;
+  list-style: none;
+  white-space: nowrap;
+}
+
+.translate-bar__btn:hover:not(:disabled) {
+  background: var(--bg-hover, #3a3a3a);
+}
+
+.translate-bar__btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.translate-bar__btn--primary {
+  background: var(--accent-color, #6366f1);
+  border-color: var(--accent-color, #6366f1);
+  color: #fff;
+}
+
+.translate-bar__btn--primary:hover:not(:disabled) {
+  background: #5558e3;
+}
+
+.translate-bar__btn:focus-visible,
+.translate-bar__close:focus-visible,
+.translate-bar__menu-item:focus-visible {
+  outline: 2px solid var(--accent-color, #6366f1);
+  outline-offset: 1px;
+}
+
+.translate-bar__more {
+  position: relative;
+}
+
+.translate-bar__more summary::-webkit-details-marker {
+  display: none;
+}
+
+.translate-bar__menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  min-width: 200px;
+  background: var(--bg-primary, #1e1e1e);
+  border: 1px solid var(--border-color, #3a3a3a);
+  border-radius: 6px;
+  padding: 4px;
+  z-index: 50;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+}
+
+.translate-bar__menu-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--text-primary, #e0e0e0);
+  cursor: pointer;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-family: inherit;
+  border-radius: 4px;
+}
+
+.translate-bar__menu-item:hover {
+  background: var(--bg-hover, #3a3a3a);
+}
+
+.translate-bar__close {
+  background: none;
+  border: none;
+  color: var(--text-secondary, #888);
+  cursor: pointer;
+  padding: 0 6px;
+  font-size: 16px;
+  line-height: 1;
+  border-radius: 3px;
+}
+
+.translate-bar__close:hover {
+  background: var(--bg-hover, #3a3a3a);
+  color: var(--text-primary, #e0e0e0);
+}
+
+.app--reduced-motion .translate-bar {
+  transition: none;
+}

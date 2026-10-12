@@ -44,6 +44,7 @@ import { getSetting } from '../../core/storage/repositories/settings';
 import { ReadingMode } from './reading-mode';
 import { ForceDarkMode } from './privacy/force-dark-mode';
 import { ColorblindMode } from './privacy/colorblind-mode';
+import { TranslationManager } from './translation/translation-manager';
 import { FingerprintResistance } from './privacy/fingerprint-resistance';
 import { CookieManager } from './privacy/cookie-manager';
 import { BlocklistUpdater } from './privacy/blocklist-updater';
@@ -77,6 +78,7 @@ class VolaryBrowser {
   private readingMode: ReadingMode;
   private forceDarkMode: ForceDarkMode;
   private colorblindMode: ColorblindMode;
+  private translationManager: TranslationManager;
   private ipcHandlers: IPCHandlers;
   private lifecycleState: AppLifecycleState = AppLifecycleState.INITIALIZING;
 
@@ -126,10 +128,12 @@ class VolaryBrowser {
     this.readingMode = new ReadingMode(this.tabManager);
     this.forceDarkMode = new ForceDarkMode();
     this.colorblindMode = new ColorblindMode();
+    this.translationManager = new TranslationManager();
     this.ipcHandlers = new IPCHandlers(
       this.windowManager, this.vaultManager, this.tabManager,
       this.historyManager, this.downloadManager, this.extensionManager,
-      this.readingMode, this.forceDarkMode, this.colorblindMode
+      this.readingMode, this.forceDarkMode, this.colorblindMode,
+      this.translationManager
     );
 
     // Configure application behavior
@@ -335,6 +339,9 @@ class VolaryBrowser {
       this.tabManager.setColorblindMode(this.colorblindMode);
       this.tabManager.setFingerprintResistance(this.fingerprintResistance);
       this.tabManager.setCookieManager(this.cookieManager);
+      this.translationManager.initialize();
+      this.translationManager.setActiveTabResolver(() => this.tabManager.getActiveTabId());
+      this.tabManager.setTranslationManager(this.translationManager);
 
       // Load expanded blocklists
       try {
@@ -364,6 +371,7 @@ class VolaryBrowser {
       const mainWindow = this.windowManager.getMainWindow();
       if (mainWindow) {
         this.tabManager.setWindow(mainWindow);
+        this.translationManager.setWindow(mainWindow);
         this.tabManager.onNavigate((url, title) => {
           if (getSetting<boolean>('saveHistory', false)) {
             this.historyManager.recordVisit(url, title);
@@ -506,6 +514,7 @@ class VolaryBrowser {
 
       // Destroy extensions and tabs before closing windows
       this.extensionManager.destroy();
+      this.translationManager.destroy();
       this.tabManager.destroy();
       this.logger.debug('Tab and extension managers destroyed');
 
@@ -545,6 +554,7 @@ class VolaryBrowser {
     // Destroy subsystems
     this.ipcHandlers.destroy();
     this.extensionManager.destroy();
+    this.translationManager.destroy();
     this.tabManager.destroy();
     this.vaultManager.destroy();
     this.windowManager.destroy();

@@ -218,6 +218,11 @@ export class AppMenu {
             click: () => send('toggle-reading-mode'),
           },
           {
+            label: 'Translate Page',
+            accelerator: 'CmdOrCtrl+Shift+T',
+            click: () => send('toggle-translate'),
+          },
+          {
             label: 'Force Dark Mode',
             click: () => mainWindow.webContents.send('toggle-dark-mode'),
           },

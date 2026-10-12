@@ -12,6 +12,8 @@
  * @module renderer/types/global
  */
 
+import type { TranslateTabState } from '../../shared/translation';
+
 /**
  * Volary API exposed by preload script
  * 
@@ -66,6 +68,34 @@ interface VolaryAPI {
     switch(tabId: string): Promise<TabOperationResult>;
     getAll(): Promise<TabUpdateEvent>;
     updateBounds(bounds: { x: number; y: number; width: number; height: number }): void;
+  };
+
+  /**
+   * Settings API
+   *
+   * Key-value preferences persisted in SQLite
+   */
+  settings: {
+    get(key: string, defaultValue?: unknown): Promise<unknown>;
+    set(key: string, value: unknown): Promise<{ success: boolean }>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    getAll(): Promise<any>;
+  };
+
+  /**
+   * Page Translation API
+   *
+   * Every method targets the active tab when tabId is omitted
+   */
+  translate: {
+    page(tabId?: string): Promise<TranslateTabState | null>;
+    restore(tabId?: string): Promise<TranslateTabState | null>;
+    toggle(tabId?: string): Promise<TranslateTabState | null>;
+    getState(tabId?: string): Promise<TranslateTabState | null>;
+    dismiss(tabId?: string): Promise<TranslateTabState | null>;
+    neverSite(host?: string, tabId?: string): Promise<{ host: string | null }>;
+    alwaysLang(lang: string, tabId?: string): Promise<{ lang: string | null }>;
+    neverLang(lang: string): Promise<{ lang: string | null }>;
   };
 
   /**

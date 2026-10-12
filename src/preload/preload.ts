@@ -408,6 +408,22 @@ const api = {
   },
 
   /**
+   * Page Translation API
+   *
+   * tabId is optional everywhere; the active tab is used when omitted.
+   */
+  translate: {
+    page: async (tabId?: string) => ipcRenderer.invoke('translate:page', { tabId }),
+    restore: async (tabId?: string) => ipcRenderer.invoke('translate:restore', { tabId }),
+    toggle: async (tabId?: string) => ipcRenderer.invoke('translate:toggle', { tabId }),
+    getState: async (tabId?: string) => ipcRenderer.invoke('translate:get-state', { tabId }),
+    dismiss: async (tabId?: string) => ipcRenderer.invoke('translate:dismiss', { tabId }),
+    neverSite: async (host?: string, tabId?: string) => ipcRenderer.invoke('translate:never-site', { host, tabId }),
+    alwaysLang: async (lang: string, tabId?: string) => ipcRenderer.invoke('translate:always-lang', { lang, tabId }),
+    neverLang: async (lang: string) => ipcRenderer.invoke('translate:never-lang', { lang }),
+  },
+
+  /**
    * Extensions API
    */
   extensions: {
@@ -482,6 +498,8 @@ const api = {
       'open-find',
       'open-settings',
       'toggle-reading-mode',
+      'toggle-translate',
+      'translate:status',
       'toggle-dark-mode',
       'toggle-bookmark',
       'toggle-bookmarks-bar',

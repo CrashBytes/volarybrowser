@@ -16,12 +16,14 @@ import { AddressBar } from './components/AddressBar';
 import { VaultInitialize } from './components/VaultInitialize';
 import { VaultUnlock } from './components/VaultUnlock';
 import { FindBar } from './components/FindBar';
+import { TranslateBar } from './components/TranslateBar';
 import { DownloadBar } from './components/DownloadBar';
 import { NewTabPage } from './components/NewTabPage';
 import { BookmarkBar } from './components/BookmarkBar';
 import { Settings } from './components/Settings';
 import { AISidebar } from './components/AISidebar';
 import { useBrowserStore } from './store/browser-store';
+import type { TranslateTabState } from '../shared/translation';
 
 export const App: React.FC = () => {
   const {
@@ -39,6 +41,7 @@ export const App: React.FC = () => {
     showBlockedPanel,
     toggleBlockedPanel,
     openFind,
+    setTranslateState,
   } = useBrowserStore();
 
   const [isMaximized, setIsMaximized] = React.useState(false);
@@ -138,6 +141,12 @@ export const App: React.FC = () => {
     };
     const handleOpenFind = () => openFind();
     const handleToggleReading = () => window.volary.readingMode.toggle();
+    const handleToggleTranslate = () => { window.volary.translate.toggle().catch(() => {}); };
+    const handleTranslateStatus = (_event: unknown, state: unknown) => {
+      if (state && typeof state === 'object' && 'tabId' in state) {
+        setTranslateState(state as TranslateTabState);
+      }
+    };
     const handleToggleBookmark = () => {
       window.dispatchEvent(new CustomEvent('volary:toggle-bookmark'));
     };
@@ -159,6 +168,8 @@ export const App: React.FC = () => {
     window.volary.on('open-find', handleOpenFind);
     window.volary.on('open-settings', handleOpenSettings);
     window.volary.on('toggle-reading-mode', handleToggleReading);
+    window.volary.on('toggle-translate', handleToggleTranslate);
+    window.volary.on('translate:status', handleTranslateStatus);
     window.volary.on('toggle-bookmark', handleToggleBookmark);
 
     return () => {
@@ -170,6 +181,8 @@ export const App: React.FC = () => {
       window.volary.off('open-find', handleOpenFind);
       window.volary.off('open-settings', handleOpenSettings);
       window.volary.off('toggle-reading-mode', handleToggleReading);
+      window.volary.off('toggle-translate', handleToggleTranslate);
+      window.volary.off('translate:status', handleTranslateStatus);
       window.volary.off('toggle-bookmark', handleToggleBookmark);
       window.removeEventListener('volary:open-settings', handleOpenSettingsDOM);
     };
@@ -233,6 +246,9 @@ export const App: React.FC = () => {
       } else if (mod && e.shiftKey && e.key === 'R') {
         e.preventDefault();
         window.volary.readingMode.toggle();
+      } else if (mod && e.shiftKey && e.key === 'T') {
+        e.preventDefault();
+        window.volary.translate.toggle().catch(() => {});
       } else if (mod && (e.key === '=' || e.key === '+')) {
         e.preventDefault();
         window.volary.zoom.in();
@@ -384,6 +400,7 @@ export const App: React.FC = () => {
           onStop={() => window.volary.navigation.reload()}
         />
         <FindBar />
+        <TranslateBar />
         <BookmarkBar
           onDialogChange={setBookmarkDialogOpen}
           onFolderDropdownHeight={setFolderDropdownHeight}
