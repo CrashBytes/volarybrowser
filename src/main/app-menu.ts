@@ -74,9 +74,9 @@ export class AppMenu {
           {
             label: 'New Tab',
             accelerator: 'CmdOrCtrl+T',
-            click: () => {
-              this.tabManager.createTab({ active: true });
-              send('focus-address-bar');
+            click: async () => {
+              await this.tabManager.createTab({ active: true });
+              this.tabManager.focusAddressBar();
             },
           },
           {
