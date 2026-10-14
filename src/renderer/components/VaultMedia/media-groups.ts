@@ -47,13 +47,15 @@ export interface NameGroup<T> {
 /**
  * Split items into name groups (2+ members, most recently saved group first)
  * and the rest. Input order is kept inside each group and in `ungrouped`.
+ * Items rejected by `canGroup` always land in `ungrouped`.
  */
 export function groupByName<T extends { name: string; savedAt: number }>(
   items: T[],
+  canGroup: (item: T) => boolean = () => true,
 ): { groups: NameGroup<T>[]; ungrouped: T[] } {
   const byKey = new Map<string, T[]>();
   for (const item of items) {
-    const key = nameGroupKey(item.name);
+    const key = canGroup(item) ? nameGroupKey(item.name) : null;
     if (key) byKey.set(key, [...(byKey.get(key) ?? []), item]);
   }
 
