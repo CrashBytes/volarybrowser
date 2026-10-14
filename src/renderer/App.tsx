@@ -21,6 +21,7 @@ import { TranslateBar } from './components/TranslateBar';
 import { DownloadBar } from './components/DownloadBar';
 import { NewTabPage } from './components/NewTabPage';
 import { BookmarkBar } from './components/BookmarkBar';
+import { BookmarkManager } from './components/BookmarkManager';
 import { Settings } from './components/Settings';
 import { AISidebar } from './components/AISidebar';
 import { Toast } from './components/Toast';
@@ -51,6 +52,7 @@ export const App: React.FC = () => {
   const [bookmarkDialogOpen, setBookmarkDialogOpen] = React.useState(false);
   const [folderDropdownHeight, setFolderDropdownHeight] = React.useState(0);
   const [settingsOpen, setSettingsOpen] = React.useState(false);
+  const [bookmarkManagerOpen, setBookmarkManagerOpen] = React.useState(false);
   const [settingsSection, setSettingsSection] = React.useState<string | undefined>();
   const [aiSidebarOpen, setAiSidebarOpen] = React.useState(false);
   const [vaultMediaOpen, setVaultMediaOpen] = React.useState(false);
@@ -74,6 +76,7 @@ export const App: React.FC = () => {
     || bookmarkDialogOpen
     || settingsOpen
     || vaultMediaOpen
+    || bookmarkManagerOpen
     || (activeTab != null && !activeTab.url);
 
   /**
@@ -168,6 +171,9 @@ export const App: React.FC = () => {
     const handleRequestUnlock = () => setVaultStatus({ skipped: false });
     window.volary.on('open-vault-media', handleOpenVaultMedia);
     window.volary.on('vault:request-unlock', handleRequestUnlock);
+    const handleOpenBookmarkManager = () => setBookmarkManagerOpen(true);
+    window.addEventListener('volary:open-bookmark-manager', handleOpenBookmarkManager);
+    window.volary.on('open-bookmark-manager', handleOpenBookmarkManager);
 
     window.volary.on('vault:status-changed', handleVaultChange);
     window.volary.on('tab:updated', handleTabUpdate);
@@ -197,6 +203,8 @@ export const App: React.FC = () => {
       window.removeEventListener('volary:open-settings', handleOpenSettingsDOM);
       window.volary.off('open-vault-media', handleOpenVaultMedia);
       window.volary.off('vault:request-unlock', handleRequestUnlock);
+      window.removeEventListener('volary:open-bookmark-manager', handleOpenBookmarkManager);
+      window.volary.off('open-bookmark-manager', handleOpenBookmarkManager);
     };
   }, []);
 
@@ -478,6 +486,12 @@ export const App: React.FC = () => {
         isUnlocked={vaultStatus.isUnlocked}
         onClose={() => setVaultMediaOpen(false)}
         onRequestUnlock={() => setVaultStatus({ skipped: false })}
+      />
+
+      {/* Bookmark Manager */}
+      <BookmarkManager
+        isOpen={bookmarkManagerOpen}
+        onClose={() => setBookmarkManagerOpen(false)}
       />
 
       {/* Vault Modals */}

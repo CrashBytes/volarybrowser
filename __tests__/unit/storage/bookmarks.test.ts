@@ -100,4 +100,57 @@ describe('Bookmarks Repository', () => {
     expect(getChildren(1)).toHaveLength(0);
     expect(getChildren(2)).toHaveLength(1);
   });
+
+  describe('moveBookmark ordering and safety', () => {
+    const titles = (parentId: number) => getChildren(parentId).map(b => b.title);
+
+    it('reorders siblings without leaving duplicate positions', () => {
+      createBookmark(1, 'A', 'https://a.test');
+      createBookmark(1, 'B', 'https://b.test');
+      const c = createBookmark(1, 'C', 'https://c.test');
+      moveBookmark(c, 1, 0);
+      expect(titles(1)).toEqual(['C', 'A', 'B']);
+      expect(getChildren(1).map(b => b.position)).toEqual([0, 1, 2]);
+    });
+
+    it('treats the position as "before the item currently there" when moving down', () => {
+      const a = createBookmark(1, 'A', 'https://a.test');
+      createBookmark(1, 'B', 'https://b.test');
+      createBookmark(1, 'C', 'https://c.test');
+      moveBookmark(a, 1, 2); // drop A before C
+      expect(titles(1)).toEqual(['B', 'A', 'C']);
+      moveBookmark(a, 1, 3); // drop at end
+      expect(titles(1)).toEqual(['B', 'C', 'A']);
+    });
+
+    it('closes the gap in the old folder and clamps past-the-end positions', () => {
+      createBookmark(1, 'A', 'https://a.test');
+      const b = createBookmark(1, 'B', 'https://b.test');
+      createBookmark(1, 'C', 'https://c.test');
+      createBookmark(2, 'X', 'https://x.test');
+      moveBookmark(b, 2, 99);
+      expect(titles(1)).toEqual(['A', 'C']);
+      expect(getChildren(1).map(x => x.position)).toEqual([0, 1]);
+      expect(titles(2)).toEqual(['X', 'B']);
+    });
+
+    it('refuses to move a folder into itself or its own descendant', () => {
+      const outer = createBookmark(1, 'Outer', null, true);
+      const inner = createBookmark(outer, 'Inner', null, true);
+      moveBookmark(outer, outer, 0);
+      moveBookmark(outer, inner, 0);
+      expect(titles(1)).toEqual(['Outer']);
+      expect(getChildren(outer).map(b => b.title)).toEqual(['Inner']);
+    });
+
+    it('refuses to move root folders or into a non-folder', () => {
+      const leaf = createBookmark(1, 'Leaf', 'https://leaf.test');
+      const other = createBookmark(1, 'Other', 'https://other.test');
+      moveBookmark(1, 2, 0);
+      moveBookmark(other, leaf, 0);
+      expect(getBookmarkTree(1)!.title).toBe('Bookmarks Bar');
+      expect(getChildren(2)).toHaveLength(0);
+      expect(titles(1)).toEqual(['Leaf', 'Other']);
+    });
+  });
 });
