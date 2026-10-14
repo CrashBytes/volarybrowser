@@ -132,6 +132,17 @@ export class TabManager {
   /**
    * Create a new tab
    */
+  /**
+   * Put the cursor in the address bar. Keyboard focus has to move from the
+   * tab's BrowserView to the chrome's webContents first, or the renderer's
+   * input.focus() does nothing while a page holds focus.
+   */
+  focusAddressBar(): void {
+    if (!this.window || this.window.isDestroyed()) return;
+    this.window.webContents.focus();
+    this.window.webContents.send('focus-address-bar');
+  }
+
   async createTab(options: TabCreateOptions = {}): Promise<TabResult<{ tabId: string }>> {
     if (!this.window || this.window.isDestroyed()) {
       return { success: false, message: 'No window available' };
@@ -603,14 +614,13 @@ export class TabManager {
 
       if (input.key === 't' && input.type === 'keyDown') {
         event.preventDefault();
-        this.createTab({ active: true });
-        this.window.webContents.send('focus-address-bar');
+        this.createTab({ active: true }).then(() => this.focusAddressBar());
       } else if (input.key === 'w' && input.type === 'keyDown') {
         event.preventDefault();
         if (this.activeTabId) this.closeTab(this.activeTabId);
       } else if (input.key === 'l' && input.type === 'keyDown') {
         event.preventDefault();
-        this.window.webContents.send('focus-address-bar');
+        this.focusAddressBar();
       } else if (input.key === 'f' && input.type === 'keyDown') {
         event.preventDefault();
         this.window.webContents.send('open-find');
