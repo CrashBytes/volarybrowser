@@ -24,6 +24,7 @@ import { BookmarkBar } from './components/BookmarkBar';
 import { BookmarkManager } from './components/BookmarkManager';
 import { Settings } from './components/Settings';
 import { AISidebar } from './components/AISidebar';
+import { Toast } from './components/Toast';
 import { useBrowserStore } from './store/browser-store';
 import type { TranslateTabState } from '../shared/translation';
 
@@ -461,6 +462,7 @@ export const App: React.FC = () => {
         )}
         <DownloadBar />
         <StatusBar />
+        <Toast />
       </footer>
 
       {/* Screen reader announcements */}

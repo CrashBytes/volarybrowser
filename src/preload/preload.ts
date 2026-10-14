@@ -508,6 +508,7 @@ const api = {
       'set-colorblind',
       'open-vault-media',
       'vault:request-unlock',
+      'toast:show',
     ];
 
     if (!allowedChannels.includes(channel)) {
