@@ -54,7 +54,8 @@ interface Downloaded {
 
 // Isolated world: the page can't see or tamper with the probe.
 const PROBE_WORLD_ID = 1999;
-const PROBE_TIMEOUT_MS = 400;
+// Busy players (TikTok) can hold the page's main thread for a while
+const PROBE_TIMEOUT_MS = 1500;
 const STREAM_CANDIDATE_LIMIT = 12;
 
 /**
@@ -62,7 +63,7 @@ const STREAM_CANDIDATE_LIMIT = 12;
  * with a transparent overlay (TikTok, Instagram), which hides it from
  * Chromium's own hit test.
  */
-async function probeMediaAt(view: BrowserView, x: number, y: number): Promise<PageMedia | null> {
+async function probeMediaAt(view: BrowserView, x: number, y: number): Promise<{ media: PageMedia | null; image: PageMedia | null }> {
   const zoom = view.webContents.getZoomFactor() || 1;
   const code = `(() => {
     const x = ${Number(x) / zoom}, y = ${Number(y) / zoom};
@@ -77,30 +78,28 @@ async function probeMediaAt(view: BrowserView, x: number, y: number): Promise<Pa
       }
       return null;
     };
-    for (const el of document.elementsFromPoint(x, y)) {
-      const found = describe(el);
-      if (found) return found;
-    }
-    // Elements with pointer-events: none are skipped by elementsFromPoint
-    for (const el of document.querySelectorAll('video, audio, img')) {
-      const r = el.getBoundingClientRect();
-      if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) {
-        const found = describe(el);
-        if (found) return found;
-      }
-    }
-    return null;
+    // Elements with pointer-events: none are skipped by elementsFromPoint, so
+    // also take any media whose box contains the point. A video wins over a
+    // poster or thumbnail image stacked with it.
+    const hit = (el) => { const r = el.getBoundingClientRect(); return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom; };
+    const found = [...document.elementsFromPoint(x, y), ...[...document.querySelectorAll('video, audio, img')].filter(hit)]
+      .map(describe).filter(Boolean);
+    return { media: found.find((m) => m.type !== 'image') || null, image: found.find((m) => m.type === 'image') || null };
   })()`;
+  const valid = (m: unknown): PageMedia | null => {
+    const media = m as PageMedia | null;
+    return media && typeof media.src === 'string' && ['image', 'video', 'audio'].includes(media.type) ? media : null;
+  };
   try {
     const result = await Promise.race([
       view.webContents.executeJavaScriptInIsolatedWorld(PROBE_WORLD_ID, [{ code }]),
       new Promise<null>((resolve) => setTimeout(() => resolve(null), PROBE_TIMEOUT_MS)),
-    ]);
-    const media = result as PageMedia | null;
-    if (!media || typeof media.src !== 'string' || !['image', 'video', 'audio'].includes(media.type)) return null;
-    return media;
-  } catch {
-    return null;
+    ]) as { media?: unknown; image?: unknown } | null;
+    if (!result) logger.warn('Media probe timed out');
+    return { media: valid(result?.media), image: valid(result?.image) };
+  } catch (error) {
+    logger.warn('Media probe failed', { error: (error as Error).message });
+    return { media: null, image: null };
   }
 }
 
@@ -207,18 +206,16 @@ export function attachContextMenu(view: BrowserView, tabManager: TabManager): vo
   view.webContents.on('context-menu', async (_event, params) => {
     const menu = new Menu();
 
-    let image: PageMedia | null = params.hasImageContents
-      ? { type: 'image', src: params.srcURL, duration: 0, width: 0, height: 0 }
-      : null;
-    let media: PageMedia | null = null;
     // Chromium only reports media it hit directly. Look under overlays, and
     // read playback info a blob: stream needs to find its file.
-    if (!image) {
-      const found = await probeMediaAt(view, params.x, params.y);
-      if (found?.type === 'image') image = found;
-      else if (found) media = found;
-    }
+    const probed = await probeMediaAt(view, params.x, params.y);
     if (view.webContents.isDestroyed()) return;
+    const direct = (type: MediaKind): PageMedia => ({ type, src: params.srcURL, duration: 0, width: 0, height: 0 });
+    const image = probed.image
+      ?? (params.hasImageContents && params.srcURL ? direct('image') : null);
+    const media = probed.media
+      ?? ((params.mediaType === 'video' || params.mediaType === 'audio') && params.srcURL ? direct(params.mediaType) : null);
+    logger.debug('Context menu media', { media: media?.type, image: !!image, mediaType: params.mediaType });
 
     // Link context
     if (params.linkURL) {
