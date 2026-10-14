@@ -69,6 +69,7 @@
  * Status bar with system indicators
  */
 .app-footer {
+  position: relative;
   flex-shrink: 0;
   background: var(--color-surface-elevated);
   border-top: 1px solid var(--color-border-base);
