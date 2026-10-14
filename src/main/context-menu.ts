@@ -18,14 +18,17 @@ const logger = LoggerFactory.create('ContextMenu');
 
 let mediaVault: MediaVault | null = null;
 let requestVaultUnlock: (() => void) | null = null;
+let showToast: ((message: string) => void) | null = null;
 
 /**
- * Wire the encrypted media store used by "Save ... to Vault", plus a callback
- * that asks the UI to show the unlock prompt when the vault is locked.
+ * Wire the encrypted media store used by "Save ... to Vault", plus callbacks
+ * that ask the UI to show the unlock prompt when the vault is locked and a
+ * self-dismissing toast when a save succeeds.
  */
-export function setMediaVault(vault: MediaVault, onLocked: () => void): void {
+export function setMediaVault(vault: MediaVault, onLocked: () => void, onToast: (message: string) => void): void {
   mediaVault = vault;
   requestVaultUnlock = onLocked;
+  showToast = onToast;
 }
 
 type SaveOutcome = { ok: true; name: string } | { ok: false; locked: boolean; message: string };
@@ -70,12 +73,7 @@ async function saveMediaToVault(url: string, type: MediaKind): Promise<SaveOutco
 
 async function reportSave(outcome: SaveOutcome, label: string): Promise<void> {
   if (outcome.ok) {
-    await dialog.showMessageBox({
-      type: 'info',
-      title: `${label} Saved`,
-      message: `${label} encrypted and saved to vault`,
-      detail: outcome.name,
-    });
+    showToast?.(`${label} saved to vault: ${outcome.name}`);
     return;
   }
   if (outcome.locked) {

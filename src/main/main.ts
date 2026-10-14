@@ -390,9 +390,11 @@ class VolaryBrowser {
 
       // Initialize vault manager (encrypted storage)
       await this.vaultManager.initialize();
-      setMediaVault(this.vaultManager.getMediaVault(), () => {
-        this.ipcHandlers.send('vault:request-unlock', null);
-      });
+      setMediaVault(
+        this.vaultManager.getMediaVault(),
+        () => this.ipcHandlers.send('vault:request-unlock', null),
+        (message) => this.ipcHandlers.send('toast:show', { message }),
+      );
       // Auto-lock (inactivity, sleep, screen lock) must reach the UI too, so an
       // open media gallery drops its decrypted previews.
       this.vaultManager.onStatusChange((status) => {
