@@ -182,6 +182,16 @@ export enum IPCChannel {
   COLORBLIND_SET = 'colorblind:set',
   COLORBLIND_STATUS = 'colorblind:status',
 
+  // Page translation
+  TRANSLATE_PAGE = 'translate:page',
+  TRANSLATE_RESTORE = 'translate:restore',
+  TRANSLATE_TOGGLE = 'translate:toggle',
+  TRANSLATE_GET_STATE = 'translate:get-state',
+  TRANSLATE_DISMISS = 'translate:dismiss',
+  TRANSLATE_NEVER_SITE = 'translate:never-site',
+  TRANSLATE_ALWAYS_LANG = 'translate:always-lang',
+  TRANSLATE_NEVER_LANG = 'translate:never-lang',
+
   // Privacy
   PRIVACY_CLEAR_DATA = 'privacy:clear-data',
   PRIVACY_PROXY_SET = 'privacy:proxy-set',
@@ -195,7 +205,8 @@ export enum IPCChannel {
 
   // Vault media
   VAULT_MEDIA_LIST = 'vault:media-list',
-  VAULT_MEDIA_OPEN = 'vault:media-open',
+  VAULT_MEDIA_READ = 'vault:media-read',
+  VAULT_MEDIA_EXPORT = 'vault:media-export',
   VAULT_MEDIA_DELETE = 'vault:media-delete',
 
   // Sessions

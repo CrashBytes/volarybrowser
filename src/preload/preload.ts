@@ -359,8 +359,9 @@ const api = {
    */
   vaultMedia: {
     list: async () => ipcRenderer.invoke('vault:media-list'),
-    open: async (filePath: string) => ipcRenderer.invoke('vault:media-open', { path: filePath }),
-    delete: async (filePath: string) => ipcRenderer.invoke('vault:media-delete', { path: filePath }),
+    read: async (id: string) => ipcRenderer.invoke('vault:media-read', { id }),
+    export: async (id: string) => ipcRenderer.invoke('vault:media-export', { id }),
+    delete: async (id: string) => ipcRenderer.invoke('vault:media-delete', { id }),
   },
 
   /**
@@ -405,6 +406,22 @@ const api = {
     cycle: async () => ipcRenderer.invoke('colorblind:cycle'),
     set: async (mode: string) => ipcRenderer.invoke('colorblind:set', { mode }),
     getStatus: async () => ipcRenderer.invoke('colorblind:status'),
+  },
+
+  /**
+   * Page Translation API
+   *
+   * tabId is optional everywhere; the active tab is used when omitted.
+   */
+  translate: {
+    page: async (tabId?: string) => ipcRenderer.invoke('translate:page', { tabId }),
+    restore: async (tabId?: string) => ipcRenderer.invoke('translate:restore', { tabId }),
+    toggle: async (tabId?: string) => ipcRenderer.invoke('translate:toggle', { tabId }),
+    getState: async (tabId?: string) => ipcRenderer.invoke('translate:get-state', { tabId }),
+    dismiss: async (tabId?: string) => ipcRenderer.invoke('translate:dismiss', { tabId }),
+    neverSite: async (host?: string, tabId?: string) => ipcRenderer.invoke('translate:never-site', { host, tabId }),
+    alwaysLang: async (lang: string, tabId?: string) => ipcRenderer.invoke('translate:always-lang', { lang, tabId }),
+    neverLang: async (lang: string) => ipcRenderer.invoke('translate:never-lang', { lang }),
   },
 
   /**
@@ -482,11 +499,16 @@ const api = {
       'open-find',
       'open-settings',
       'toggle-reading-mode',
+      'toggle-translate',
+      'translate:status',
       'toggle-dark-mode',
       'toggle-bookmark',
       'toggle-bookmarks-bar',
       'open-bookmark-manager',
       'set-colorblind',
+      'open-vault-media',
+      'vault:request-unlock',
+      'toast:show',
     ];
 
     if (!allowedChannels.includes(channel)) {

@@ -7,8 +7,7 @@
  * @module app-menu
  */
 
-import { Menu, app, BrowserWindow, shell, dialog } from 'electron';
-import * as path from 'path';
+import { Menu, app, BrowserWindow, dialog } from 'electron';
 import { TabManager } from './tab-manager';
 import { saveSession, listSessions, getSession } from '../../core/storage/repositories/sessions';
 import { getRecentHistory, deleteAllHistory } from '../../core/storage/repositories/history';
@@ -214,6 +213,11 @@ export class AppMenu {
             click: () => send('toggle-reading-mode'),
           },
           {
+            label: 'Translate Page',
+            accelerator: 'CmdOrCtrl+Shift+T',
+            click: () => send('toggle-translate'),
+          },
+          {
             label: 'Force Dark Mode',
             click: () => mainWindow.webContents.send('toggle-dark-mode'),
           },
@@ -330,10 +334,7 @@ export class AppMenu {
           { type: 'separator' },
           {
             label: 'Saved Media (Vault)',
-            click: () => {
-              const mediaDir = path.join(app.getPath('userData'), 'vault', 'media');
-              shell.openPath(mediaDir);
-            },
+            click: () => send('open-vault-media'),
           },
           { type: 'separator' },
           {

@@ -154,11 +154,8 @@ export class Vault {
   private config: VaultCryptoConfig;
   private metadata: VaultMetadata | null = null;
   
-  /** Operation counter for key rotation policy */
+  /** Operation counter (exposed for future storage-layer rotation) */
   private operationCount = 0;
-  
-  /** Timestamp of last key rotation */
-  private lastRotation = 0;
 
   constructor(config: Partial<VaultCryptoConfig> = {}) {
     this.config = { ...DEFAULT_CRYPTO_CONFIG, ...config };
@@ -217,7 +214,6 @@ export class Vault {
     // Store master key in memory
     this.masterKey = masterKey;
     this.status = VaultStatus.UNLOCKED;
-    this.lastRotation = Date.now();
 
     // Persist metadata to disk (implementation delegated to storage layer)
     await this.persistMetadata();
@@ -252,7 +248,6 @@ export class Vault {
         this.masterKey = derivedKey;
         this.status = VaultStatus.UNLOCKED;
         this.metadata.lastUnlocked = Date.now();
-        this.lastRotation = Date.now();
         await this.persistMetadata();
         return true;
       }
@@ -309,7 +304,6 @@ export class Vault {
     context?: string
   ): Promise<EncryptedData> {
     this.ensureUnlocked();
-    this.checkRotationPolicy();
 
     // Derive context-specific key if requested
     const encryptionKey = context
@@ -467,70 +461,17 @@ export class Vault {
   }
 
   /**
-   * Check if key rotation policy requires new key material
-   * 
-   * Rotation Triggers:
-   * 1. Operation count exceeds threshold
-   * 2. Time since last rotation exceeds threshold
-   * 
-   * Forward Secrecy: After rotation, old ciphertexts cannot be
-   * decrypted even if future keys are compromised.
-   */
-  private checkRotationPolicy(): void {
-    const shouldRotate =
-      this.operationCount >= this.config.rotation.maxOperations ||
-      Date.now() - this.lastRotation >= this.config.rotation.maxDuration * 1000;
-
-    if (shouldRotate) {
-      this.rotateKey();
-    }
-  }
-
-  /**
-   * Rotate master key material
+   * Key rotation
    *
-   * Derives a new master key from the current key + fresh random data
-   * using HKDF. Updates the verification blob and clears derived key cache.
-   *
-   * Note: This rotates the in-memory key material and verification blob.
-   * Callers must re-persist metadata after rotation. Existing encrypted
-   * data is NOT re-encrypted — it remains decryptable via the derived key
-   * chain. Full re-encryption of stored data should be handled by the
-   * storage layer when it is implemented.
+   * The previous in-memory rotation (HKDF the master key forward after N
+   * operations or 24 h) replaced the key and the verification blob without
+   * re-encrypting anything or re-deriving from the passphrase. Once it fired,
+   * ciphertexts written earlier could no longer be opened and, after the next
+   * lock, the passphrase itself no longer unlocked the vault. Rotation now has
+   * to be done by the storage layer: derive the new key, re-encrypt every
+   * record, then persist new metadata. The `rotation` config is kept so the
+   * policy thresholds survive until that lands.
    */
-  private rotateKey(): void {
-    if (!this.masterKey || !this.metadata) return;
-
-    const oldKey = this.masterKey;
-
-    // Derive new master key: HKDF(currentKey, freshSalt, "rotation")
-    const freshSalt = randomBytes(32);
-    const newKey = hkdf(
-      sha256,
-      oldKey,
-      freshSalt,
-      Buffer.from('volary.vault.rotation'),
-      32
-    );
-
-    // Update verification blob with new key
-    this.metadata.verificationBlob = Buffer.from(
-      hmac(sha256, newKey, Buffer.from('volary.vault.verification'))
-    );
-
-    // Install new key and clear derived key cache
-    this.masterKey = newKey;
-    for (const key of this.derivedKeys.values()) {
-      key.fill(0);
-    }
-    this.derivedKeys.clear();
-
-    // Zero old key material
-    oldKey.fill(0);
-
-    this.lastRotation = Date.now();
-    this.operationCount = 0;
-  }
 
   /**
    * Validate passphrase meets security requirements

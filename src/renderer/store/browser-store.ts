@@ -9,6 +9,7 @@
 
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
+import type { TranslateTabState } from '../../shared/translation';
 
 interface TabState {
   id: string;
@@ -67,6 +68,9 @@ interface BrowserState {
   blockedUrls: string[];
   showBlockedPanel: boolean;
 
+  // Page translation, keyed by tab id
+  translate: Record<string, TranslateTabState>;
+
   // Actions
   setPlatform: (platform: NodeJS.Platform) => void;
   setTabs: (tabs: TabState[], activeTabId: string | null) => void;
@@ -78,6 +82,7 @@ interface BrowserState {
   closeFind: () => void;
   setFindText: (text: string) => void;
   setFindResult: (matches: number, activeMatch: number) => void;
+  setTranslateState: (state: TranslateTabState) => void;
 }
 
 export const useBrowserStore = create<BrowserState>()(
@@ -91,12 +96,18 @@ export const useBrowserStore = create<BrowserState>()(
     blockedCount: 0,
     blockedUrls: [],
     showBlockedPanel: false,
+    translate: {},
 
     setPlatform: (platform) => set((s) => { s.platform = platform; }),
 
     setTabs: (tabs, activeTabId) => set((s) => {
       s.tabs = tabs;
       s.activeTabId = activeTabId;
+      // Drop translation state for tabs that no longer exist
+      const live = new Set(tabs.map((t) => t.id));
+      for (const id of Object.keys(s.translate)) {
+        if (!live.has(id)) delete s.translate[id];
+      }
     }),
 
     setVaultStatus: (status) => set((s) => {
@@ -121,6 +132,10 @@ export const useBrowserStore = create<BrowserState>()(
     setFindResult: (matches, activeMatch) => set((s) => {
       s.find.matches = matches;
       s.find.activeMatch = activeMatch;
+    }),
+
+    setTranslateState: (state) => set((s) => {
+      s.translate[state.tabId] = state;
     }),
   }))
 );

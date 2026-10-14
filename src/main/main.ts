@@ -38,11 +38,13 @@ import { HeaderPrivacy } from './privacy/header-privacy';
 import { PermissionHandler } from './permission-dialog';
 import { CrashRecovery } from './crash-recovery';
 import { AppMenu } from './app-menu';
+import { setMediaVault } from './context-menu';
 import { setSearchEngine } from './utils/url-validator';
 import { getSetting } from '../../core/storage/repositories/settings';
 import { ReadingMode } from './reading-mode';
 import { ForceDarkMode } from './privacy/force-dark-mode';
 import { ColorblindMode } from './privacy/colorblind-mode';
+import { TranslationManager } from './translation/translation-manager';
 import { FingerprintResistance } from './privacy/fingerprint-resistance';
 import { CookieManager } from './privacy/cookie-manager';
 import { BlocklistUpdater } from './privacy/blocklist-updater';
@@ -76,6 +78,7 @@ class VolaryBrowser {
   private readingMode: ReadingMode;
   private forceDarkMode: ForceDarkMode;
   private colorblindMode: ColorblindMode;
+  private translationManager: TranslationManager;
   private ipcHandlers: IPCHandlers;
   private lifecycleState: AppLifecycleState = AppLifecycleState.INITIALIZING;
 
@@ -125,10 +128,12 @@ class VolaryBrowser {
     this.readingMode = new ReadingMode(this.tabManager);
     this.forceDarkMode = new ForceDarkMode();
     this.colorblindMode = new ColorblindMode();
+    this.translationManager = new TranslationManager();
     this.ipcHandlers = new IPCHandlers(
       this.windowManager, this.vaultManager, this.tabManager,
       this.historyManager, this.downloadManager, this.extensionManager,
-      this.readingMode, this.forceDarkMode, this.colorblindMode
+      this.readingMode, this.forceDarkMode, this.colorblindMode,
+      this.translationManager
     );
 
     // Configure application behavior
@@ -216,6 +221,7 @@ class VolaryBrowser {
       if (BrowserWindow.getAllWindows().length === 0) {
         this.logger.info('Reactivating application (macOS)');
         await this.createMainWindow();
+        await this.attachMainWindow();
       }
     });
 
@@ -334,6 +340,9 @@ class VolaryBrowser {
       this.tabManager.setColorblindMode(this.colorblindMode);
       this.tabManager.setFingerprintResistance(this.fingerprintResistance);
       this.tabManager.setCookieManager(this.cookieManager);
+      this.translationManager.initialize();
+      this.translationManager.setActiveTabResolver(() => this.tabManager.getActiveTabId());
+      this.tabManager.setTranslationManager(this.translationManager);
 
       // Load expanded blocklists
       try {
@@ -359,39 +368,38 @@ class VolaryBrowser {
       await this.createMainWindow();
       this.lifecycleState = AppLifecycleState.WINDOW_CREATED;
 
-      // Connect TabManager to the main window and create initial tab
-      const mainWindow = this.windowManager.getMainWindow();
-      if (mainWindow) {
-        this.tabManager.setWindow(mainWindow);
-        this.tabManager.onNavigate((url, title) => {
-          if (getSetting<boolean>('saveHistory', false)) {
-            this.historyManager.recordVisit(url, title);
-          }
-          this.networkFilter.resetCount();
-          // Persist tab state for crash recovery
-          const tabs = this.tabManager.getAllTabStates();
-          this.crashRecovery.saveTabs(tabs);
-        });
-        this.networkFilter.onBlockedCountUpdate((count, urls) => {
-          if (mainWindow && !mainWindow.isDestroyed()) {
-            mainWindow.webContents.send('privacy:blocked-count', { count, urls });
-          }
-        });
-        this.downloadManager.initialize(mainWindow);
-        new AppMenu(this.tabManager).build(mainWindow);
-        // Always start with a single fresh tab. Auto-restore of the previous
-        // session is intentionally disabled: it serially awaited loadURL for
-        // every saved tab here, blocking the rest of init (including the vault)
-        // behind page loads that can hang. Clear any stale crash-recovery
-        // state so a prior session can never resurface. Manual named sessions
-        // remain available via the application menu.
-        this.crashRecovery.clearSavedTabs();
-        await this.tabManager.createTab({ active: true });
-        this.logger.debug('Tab manager initialized');
-      }
+      // Window-independent callbacks: registered once for the process lifetime.
+      this.tabManager.onNavigate((url, title) => {
+        if (getSetting<boolean>('saveHistory', false)) {
+          this.historyManager.recordVisit(url, title);
+        }
+        this.networkFilter.resetCount();
+        // Persist tab state for crash recovery
+        const tabs = this.tabManager.getAllTabStates();
+        this.crashRecovery.saveTabs(tabs);
+      });
+      this.networkFilter.onBlockedCountUpdate((count, urls) => {
+        const win = this.windowManager.getMainWindow();
+        if (win && !win.isDestroyed()) {
+          win.webContents.send('privacy:blocked-count', { count, urls });
+        }
+      });
+
+      // Connect TabManager and friends to the main window and create initial tab
+      await this.attachMainWindow();
 
       // Initialize vault manager (encrypted storage)
       await this.vaultManager.initialize();
+      setMediaVault(
+        this.vaultManager.getMediaVault(),
+        () => this.ipcHandlers.send('vault:request-unlock', null),
+        (message) => this.ipcHandlers.send('toast:show', { message }),
+      );
+      // Auto-lock (inactivity, sleep, screen lock) must reach the UI too, so an
+      // open media gallery drops its decrypted previews.
+      this.vaultManager.onStatusChange((status) => {
+        this.ipcHandlers.send('vault:status-changed', status);
+      });
       this.logger.debug('Vault manager initialized');
 
       // Initialize extension system
@@ -444,6 +452,30 @@ class VolaryBrowser {
    * - Security policies are applied
    * - IPC handlers are registered
    */
+  /**
+   * Wire every window-bound subsystem to the current main window and open a
+   * fresh tab in it. Runs on first launch and again whenever macOS recreates
+   * the window after the last one was closed (Dock click / 'activate').
+   */
+  private async attachMainWindow(): Promise<void> {
+    const mainWindow = this.windowManager.getMainWindow();
+    if (!mainWindow) return;
+
+    this.tabManager.setWindow(mainWindow);
+    this.translationManager.setWindow(mainWindow);
+    this.downloadManager.initialize(mainWindow);
+    new AppMenu(this.tabManager).build(mainWindow);
+    // Always start with a single fresh tab. Auto-restore of the previous
+    // session is intentionally disabled: it serially awaited loadURL for
+    // every saved tab here, blocking the rest of init (including the vault)
+    // behind page loads that can hang. Clear any stale crash-recovery
+    // state so a prior session can never resurface. Manual named sessions
+    // remain available via the application menu.
+    this.crashRecovery.clearSavedTabs();
+    await this.tabManager.createTab({ active: true });
+    this.logger.debug('Tab manager attached to window');
+  }
+
   private async createMainWindow(): Promise<void> {
     this.logger.info('Creating main window');
 
@@ -505,6 +537,7 @@ class VolaryBrowser {
 
       // Destroy extensions and tabs before closing windows
       this.extensionManager.destroy();
+      this.translationManager.destroy();
       this.tabManager.destroy();
       this.logger.debug('Tab and extension managers destroyed');
 
@@ -544,6 +577,7 @@ class VolaryBrowser {
     // Destroy subsystems
     this.ipcHandlers.destroy();
     this.extensionManager.destroy();
+    this.translationManager.destroy();
     this.tabManager.destroy();
     this.vaultManager.destroy();
     this.windowManager.destroy();

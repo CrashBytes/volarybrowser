@@ -97,6 +97,19 @@ export const settingsSetSchema = z.object({
   value: z.unknown(),
 });
 
+// Page translation
+export const translateTabSchema = z.object({
+  tabId: z.string().optional(),
+});
+export const translateSiteSchema = z.object({
+  host: z.string().max(253).optional(),
+  tabId: z.string().optional(),
+});
+export const translateLangSchema = z.object({
+  lang: z.string().min(2).max(12),
+  tabId: z.string().optional(),
+});
+
 // Find in page
 export const findStartSchema = z.object({
   text: z.string(),
@@ -111,3 +124,8 @@ export const findStartSchema = z.object({
 export function zodValidator<T>(schema: z.ZodType<T>): (payload: unknown) => payload is T {
   return (payload: unknown): payload is T => schema.safeParse(payload).success;
 }
+
+// Vault media
+export const vaultMediaIdSchema = z.object({
+  id: z.string().uuid(),
+});

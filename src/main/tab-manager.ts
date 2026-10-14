@@ -25,6 +25,7 @@ import type { ForceDarkMode } from './privacy/force-dark-mode';
 import type { ColorblindMode } from './privacy/colorblind-mode';
 import type { FingerprintResistance } from './privacy/fingerprint-resistance';
 import type { CookieManager } from './privacy/cookie-manager';
+import type { TranslationManager } from './translation/translation-manager';
 
 interface ManagedTab {
   view: BrowserView;
@@ -42,6 +43,7 @@ export class TabManager {
   private colorblindMode: ColorblindMode | null = null;
   private fingerprintResistance: FingerprintResistance | null = null;
   private cookieManager: CookieManager | null = null;
+  private translationManager: TranslationManager | null = null;
   private onNavigateCallback: ((url: string, title: string) => void) | null = null;
 
   constructor() {
@@ -71,6 +73,14 @@ export class TabManager {
     this.cookieManager = cm;
   }
 
+  setTranslationManager(tm: TranslationManager): void {
+    this.translationManager = tm;
+  }
+
+  getTranslationManager(): TranslationManager | null {
+    return this.translationManager;
+  }
+
   /**
    * Attach to main BrowserWindow
    */
@@ -81,7 +91,35 @@ export class TabManager {
       this.repositionActiveView();
     });
 
+    // The tab BrowserViews are owned by this window: when it is destroyed
+    // their WebContents die with it. On macOS the app keeps running after the
+    // last window closes and a Dock click creates a fresh window, so forget
+    // the dead window and its tabs here or every later createTab() fails with
+    // "No window available" and navigate() dereferences a destroyed view.
+    window.once('closed', () => {
+      if (this.window !== window) return; // already re-attached elsewhere
+      this.detachWindow();
+    });
+
     this.logger.info('TabManager attached to window');
+  }
+
+  /**
+   * Forget the current window and every tab that lived in it.
+   */
+  private detachWindow(): void {
+    for (const [, tab] of this.tabs) {
+      try {
+        const wc = tab.view?.webContents;
+        if (wc && !wc.isDestroyed()) {
+          (wc as any).destroy?.();
+        }
+      } catch { /* already destroyed */ }
+    }
+    this.tabs.clear();
+    this.activeTabId = null;
+    this.window = null;
+    this.logger.info('TabManager detached from closed window');
   }
 
   /**
@@ -180,6 +218,7 @@ export class TabManager {
 
     // Auto-delete cookies for this tab's domains
     this.cookieManager?.cleanupTab(tabId).catch(() => {});
+    this.translationManager?.onTabClosed(tabId);
 
     this.logger.info('Tab closed', { tabId });
 
@@ -475,6 +514,9 @@ export class TabManager {
       // Track domain for cookie cleanup on tab close
       this.cookieManager?.trackDomain(tabId, url);
 
+      // A new document replaced any translated text
+      this.translationManager?.onNavigated(tabId, url);
+
       // Inject force dark mode CSS
       if (this.forceDarkMode?.isEnabled()) {
         wc.insertCSS(this.forceDarkMode.getCSS()).catch(() => {});
@@ -508,6 +550,14 @@ export class TabManager {
           this.logger.error('Content script injection failed', error as Error, { url });
         });
       }
+    });
+
+    wc.on('did-finish-load', () => {
+      if (wc.isDestroyed() || !this.translationManager) return;
+      const url = wc.getURL();
+      this.translationManager.onPageLoaded(tabId, wc, url).catch((error) => {
+        this.logger.debug('Translation check failed', { tabId, error: (error as Error).message });
+      });
     });
 
     wc.on('did-navigate-in-page', (_event, url) => {
@@ -576,6 +626,9 @@ export class TabManager {
       } else if (input.shift && input.key === 'R' && input.type === 'keyDown') {
         event.preventDefault();
         this.window.webContents.send('toggle-reading-mode');
+      } else if (input.shift && input.key === 'T' && input.type === 'keyDown') {
+        event.preventDefault();
+        this.window.webContents.send('toggle-translate');
       } else if (input.key === 'p' && input.type === 'keyDown') {
         event.preventDefault();
         wc.print();

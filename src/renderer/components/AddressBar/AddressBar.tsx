@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { BackIcon, ForwardIcon, ReloadIcon, StopIcon, LockIcon, UnlockIcon, ReaderIcon, MoonIcon, EyeIcon, BookmarkIcon, BookmarkFilledIcon, GearIcon } from '../../assets/icons/NavIcons';
+import { BackIcon, ForwardIcon, ReloadIcon, StopIcon, LockIcon, UnlockIcon, ReaderIcon, MoonIcon, EyeIcon, BookmarkIcon, BookmarkFilledIcon, GearIcon, TranslateIcon } from '../../assets/icons/NavIcons';
+import { useBrowserStore } from '../../store/browser-store';
 import './AddressBar.css';
 
 interface BookmarkResult {
@@ -39,6 +40,13 @@ export const AddressBar: React.FC<AddressBarProps> = ({
   const [colorblindLabel, setColorblindLabel] = useState('Off');
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const translateState = useBrowserStore((s) => (s.activeTabId ? s.translate[s.activeTabId] : undefined));
+  const translateActive = translateState?.status === 'translated' || translateState?.status === 'translating';
+  const translateTitle = translateState?.status === 'translated'
+    ? `Show original (${translateState.sourceName ?? 'original'})`
+    : translateState?.status === 'translating'
+      ? 'Translating...'
+      : `Translate page to ${translateState?.targetName ?? 'English'} (Cmd+Shift+T)`;
 
   // Sync external URL changes when not focused
   useEffect(() => {
@@ -47,15 +55,11 @@ export const AddressBar: React.FC<AddressBarProps> = ({
     }
   }, [url, isFocused]);
 
-  // Load toolbar states on mount and listen for bookmark toggle from menu
+  // Load toolbar states on mount
   useEffect(() => {
     window.volary?.darkMode?.getStatus().then((r: { enabled?: boolean }) => setDarkModeActive(r?.enabled ?? false)).catch(() => {});
     window.volary?.colorblind?.getStatus().then((r: { label?: string }) => setColorblindLabel(r?.label ?? 'Off')).catch(() => {});
-
-    const handleMenuBookmark = () => toggleBookmark();
-    window.addEventListener('volary:toggle-bookmark', handleMenuBookmark);
-    return () => window.removeEventListener('volary:toggle-bookmark', handleMenuBookmark);
-  }, [toggleBookmark]);
+  }, []);
 
   // Reset reader mode state when URL changes (navigating away exits reader)
   useEffect(() => {
@@ -93,6 +97,15 @@ export const AddressBar: React.FC<AddressBarProps> = ({
       console.error('[AddressBar] Bookmark toggle failed:', err);
     }
   }, [url, isBookmarked]);
+
+  // Listen for bookmark toggle from the app menu. Declared after
+  // toggleBookmark: the dependency array is evaluated during render, so
+  // referencing the const above its declaration throws (temporal dead zone).
+  useEffect(() => {
+    const handleMenuBookmark = () => toggleBookmark();
+    window.addEventListener('volary:toggle-bookmark', handleMenuBookmark);
+    return () => window.removeEventListener('volary:toggle-bookmark', handleMenuBookmark);
+  }, [toggleBookmark]);
 
   const fetchSuggestions = (query: string) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -274,6 +287,16 @@ export const AddressBar: React.FC<AddressBarProps> = ({
           aria-label="Toggle reading mode"
         >
           <ReaderIcon />
+        </button>
+        <button
+          className={`address-bar__btn${translateActive ? ' address-bar__btn--active' : ''}`}
+          onClick={() => { window.volary.translate.toggle().catch(() => {}); }}
+          disabled={!url || !/^https?:/i.test(url)}
+          title={translateTitle}
+          aria-label={translateActive ? 'Show original page' : 'Translate page'}
+          aria-pressed={translateActive}
+        >
+          <TranslateIcon />
         </button>
         <button
           className={`address-bar__btn${darkModeActive ? ' address-bar__btn--active' : ''}`}

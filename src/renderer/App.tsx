@@ -15,14 +15,18 @@ import { TabBar } from './components/TabBar';
 import { AddressBar } from './components/AddressBar';
 import { VaultInitialize } from './components/VaultInitialize';
 import { VaultUnlock } from './components/VaultUnlock';
+import { VaultMedia } from './components/VaultMedia';
 import { FindBar } from './components/FindBar';
+import { TranslateBar } from './components/TranslateBar';
 import { DownloadBar } from './components/DownloadBar';
 import { NewTabPage } from './components/NewTabPage';
 import { BookmarkBar } from './components/BookmarkBar';
 import { BookmarkManager } from './components/BookmarkManager';
 import { Settings } from './components/Settings';
 import { AISidebar } from './components/AISidebar';
+import { Toast } from './components/Toast';
 import { useBrowserStore } from './store/browser-store';
+import type { TranslateTabState } from '../shared/translation';
 
 export const App: React.FC = () => {
   const {
@@ -40,6 +44,7 @@ export const App: React.FC = () => {
     showBlockedPanel,
     toggleBlockedPanel,
     openFind,
+    setTranslateState,
   } = useBrowserStore();
 
   const [isMaximized, setIsMaximized] = React.useState(false);
@@ -50,6 +55,7 @@ export const App: React.FC = () => {
   const [bookmarkManagerOpen, setBookmarkManagerOpen] = React.useState(false);
   const [settingsSection, setSettingsSection] = React.useState<string | undefined>();
   const [aiSidebarOpen, setAiSidebarOpen] = React.useState(false);
+  const [vaultMediaOpen, setVaultMediaOpen] = React.useState(false);
   const [highContrast, setHighContrast] = React.useState(false);
   const [reducedMotion, setReducedMotion] = React.useState(false);
   const [screenReaderMode, setScreenReaderMode] = React.useState(false);
@@ -69,6 +75,7 @@ export const App: React.FC = () => {
     || tabContextMenuOpen
     || bookmarkDialogOpen
     || settingsOpen
+    || vaultMediaOpen
     || bookmarkManagerOpen
     || (activeTab != null && !activeTab.url);
 
@@ -141,6 +148,12 @@ export const App: React.FC = () => {
     };
     const handleOpenFind = () => openFind();
     const handleToggleReading = () => window.volary.readingMode.toggle();
+    const handleToggleTranslate = () => { window.volary.translate.toggle().catch(() => {}); };
+    const handleTranslateStatus = (_event: unknown, state: unknown) => {
+      if (state && typeof state === 'object' && 'tabId' in state) {
+        setTranslateState(state as TranslateTabState);
+      }
+    };
     const handleToggleBookmark = () => {
       window.dispatchEvent(new CustomEvent('volary:toggle-bookmark'));
     };
@@ -153,6 +166,11 @@ export const App: React.FC = () => {
       setSettingsOpen(true);
     };
     window.addEventListener('volary:open-settings', handleOpenSettingsDOM);
+    const handleOpenVaultMedia = () => setVaultMediaOpen(true);
+    // Context menu "Save to Vault" while locked, or the gallery's Unlock button
+    const handleRequestUnlock = () => setVaultStatus({ skipped: false });
+    window.volary.on('open-vault-media', handleOpenVaultMedia);
+    window.volary.on('vault:request-unlock', handleRequestUnlock);
     const handleOpenBookmarkManager = () => setBookmarkManagerOpen(true);
     window.addEventListener('volary:open-bookmark-manager', handleOpenBookmarkManager);
     window.volary.on('open-bookmark-manager', handleOpenBookmarkManager);
@@ -165,6 +183,8 @@ export const App: React.FC = () => {
     window.volary.on('open-find', handleOpenFind);
     window.volary.on('open-settings', handleOpenSettings);
     window.volary.on('toggle-reading-mode', handleToggleReading);
+    window.volary.on('toggle-translate', handleToggleTranslate);
+    window.volary.on('translate:status', handleTranslateStatus);
     window.volary.on('toggle-bookmark', handleToggleBookmark);
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -177,8 +197,12 @@ export const App: React.FC = () => {
       window.volary.off('open-find', handleOpenFind);
       window.volary.off('open-settings', handleOpenSettings);
       window.volary.off('toggle-reading-mode', handleToggleReading);
+      window.volary.off('toggle-translate', handleToggleTranslate);
+      window.volary.off('translate:status', handleTranslateStatus);
       window.volary.off('toggle-bookmark', handleToggleBookmark);
       window.removeEventListener('volary:open-settings', handleOpenSettingsDOM);
+      window.volary.off('open-vault-media', handleOpenVaultMedia);
+      window.volary.off('vault:request-unlock', handleRequestUnlock);
       window.removeEventListener('volary:open-bookmark-manager', handleOpenBookmarkManager);
       window.volary.off('open-bookmark-manager', handleOpenBookmarkManager);
     };
@@ -242,6 +266,9 @@ export const App: React.FC = () => {
       } else if (mod && e.shiftKey && e.key === 'R') {
         e.preventDefault();
         window.volary.readingMode.toggle();
+      } else if (mod && e.shiftKey && e.key === 'T') {
+        e.preventDefault();
+        window.volary.translate.toggle().catch(() => {});
       } else if (mod && (e.key === '=' || e.key === '+')) {
         e.preventDefault();
         window.volary.zoom.in();
@@ -393,6 +420,7 @@ export const App: React.FC = () => {
           onStop={() => window.volary.navigation.reload()}
         />
         <FindBar />
+        <TranslateBar />
         <BookmarkBar
           onDialogChange={setBookmarkDialogOpen}
           onFolderDropdownHeight={setFolderDropdownHeight}
@@ -434,6 +462,7 @@ export const App: React.FC = () => {
         )}
         <DownloadBar />
         <StatusBar />
+        <Toast />
       </footer>
 
       {/* Screen reader announcements */}
@@ -449,6 +478,14 @@ export const App: React.FC = () => {
           setSettingsOpen(false);
           loadAccessibilitySettings(); // Reload settings that affect the chrome
         }}
+      />
+
+      {/* Encrypted media gallery */}
+      <VaultMedia
+        isOpen={vaultMediaOpen}
+        isUnlocked={vaultStatus.isUnlocked}
+        onClose={() => setVaultMediaOpen(false)}
+        onRequestUnlock={() => setVaultStatus({ skipped: false })}
       />
 
       {/* Bookmark Manager */}
