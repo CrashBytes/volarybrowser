@@ -39,6 +39,7 @@ import { PermissionHandler } from './permission-dialog';
 import { CrashRecovery } from './crash-recovery';
 import { AppMenu } from './app-menu';
 import { setMediaVault } from './context-menu';
+import { mediaSniffer } from './media/media-sniffer';
 import { setSearchEngine } from './utils/url-validator';
 import { getSetting } from '../../core/storage/repositories/settings';
 import { ReadingMode } from './reading-mode';
@@ -390,6 +391,7 @@ class VolaryBrowser {
 
       // Initialize vault manager (encrypted storage)
       await this.vaultManager.initialize();
+      mediaSniffer.install();
       setMediaVault(
         this.vaultManager.getMediaVault(),
         () => this.ipcHandlers.send('vault:request-unlock', null),
