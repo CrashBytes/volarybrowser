@@ -126,7 +126,8 @@ export const VaultMedia: React.FC<VaultMediaProps> = ({ isOpen, isUnlocked, onCl
 
   if (!isOpen) return null;
 
-  const { groups, ungrouped } = groupByName(items);
+  // Only images group by name for now; videos and audio stay under Other.
+  const { groups, ungrouped } = groupByName(items, (item) => item.type === 'image');
 
   const renderGrid = (list: MediaEntry[]) => (
     <ul className="vault-media-grid">

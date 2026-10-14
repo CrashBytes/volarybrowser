@@ -56,4 +56,15 @@ describe('groupByName', () => {
     ]);
     expect(groups.map((g) => g.key)).toEqual(['dog', 'a cat']);
   });
+
+  it('leaves items rejected by canGroup ungrouped', () => {
+    const media = [
+      { ...item('1', 'clip-1.jpg', 1), type: 'image' },
+      { ...item('2', 'clip-2.mp4', 2), type: 'video' },
+      { ...item('3', 'clip-3.mp4', 3), type: 'video' },
+    ];
+    const { groups, ungrouped } = groupByName(media, (i) => i.type === 'image');
+    expect(groups).toHaveLength(0);
+    expect(ungrouped.map((i) => i.id)).toEqual(['1', '2', '3']);
+  });
 });
