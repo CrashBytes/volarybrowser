@@ -10,6 +10,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import './VaultMedia.css';
+import { groupByName } from './media-groups';
 
 interface MediaEntry {
   id: string;
@@ -125,6 +126,30 @@ export const VaultMedia: React.FC<VaultMediaProps> = ({ isOpen, isUnlocked, onCl
 
   if (!isOpen) return null;
 
+  const { groups, ungrouped } = groupByName(items);
+
+  const renderGrid = (list: MediaEntry[]) => (
+    <ul className="vault-media-grid">
+      {list.map((item) => (
+        <li key={item.id} className="vault-media-card">
+          <button className="vault-media-thumb" onClick={() => openItem(item)} aria-label={`View ${item.name}`}>
+            {thumbs[item.id]
+              ? <img src={thumbs[item.id]} alt="" />
+              : <span className="vault-media-icon">{item.type === 'video' ? '🎬' : item.type === 'audio' ? '🎵' : '🖼️'}</span>}
+          </button>
+          <div className="vault-media-meta">
+            <span className="vault-media-name" title={item.name}>{item.name}</span>
+            <span className="vault-media-size">{formatSize(item.size)} · {new Date(item.savedAt).toLocaleDateString()}</span>
+          </div>
+          <div className="vault-media-actions">
+            <button className="vault-media-btn" onClick={() => exportItem(item)}>Export</button>
+            <button className="vault-media-btn vault-media-btn--danger" onClick={() => deleteItem(item)}>Delete</button>
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+
   return (
     <div className="vault-media-overlay" onKeyDown={onKeyDown} role="dialog" aria-modal="true" aria-labelledby="vault-media-title">
       <div className="vault-media-modal">
@@ -149,25 +174,32 @@ export const VaultMedia: React.FC<VaultMediaProps> = ({ isOpen, isUnlocked, onCl
                 <p className="vault-media-hint">Right-click an image or video on any page and choose “Save to Vault”.</p>
               </div>
             )}
-            <ul className="vault-media-grid">
-              {items.map((item) => (
-                <li key={item.id} className="vault-media-card">
-                  <button className="vault-media-thumb" onClick={() => openItem(item)} aria-label={`View ${item.name}`}>
-                    {thumbs[item.id]
-                      ? <img src={thumbs[item.id]} alt="" />
-                      : <span className="vault-media-icon">{item.type === 'video' ? '🎬' : item.type === 'audio' ? '🎵' : '🖼️'}</span>}
-                  </button>
-                  <div className="vault-media-meta">
-                    <span className="vault-media-name" title={item.name}>{item.name}</span>
-                    <span className="vault-media-size">{formatSize(item.size)} · {new Date(item.savedAt).toLocaleDateString()}</span>
-                  </div>
-                  <div className="vault-media-actions">
-                    <button className="vault-media-btn" onClick={() => exportItem(item)}>Export</button>
-                    <button className="vault-media-btn vault-media-btn--danger" onClick={() => deleteItem(item)}>Delete</button>
-                  </div>
-                </li>
-              ))}
-            </ul>
+            {items.length > 0 && (
+              <div className="vault-media-scroll">
+                {groups.length === 0
+                  ? renderGrid(items)
+                  : (
+                    <>
+                      {groups.map((g) => (
+                        <details key={g.key} className="vault-media-group" open>
+                          <summary className="vault-media-group-title">
+                            {g.label} <span className="vault-media-group-count">{g.items.length}</span>
+                          </summary>
+                          {renderGrid(g.items)}
+                        </details>
+                      ))}
+                      {ungrouped.length > 0 && (
+                        <details className="vault-media-group" open>
+                          <summary className="vault-media-group-title">
+                            Other <span className="vault-media-group-count">{ungrouped.length}</span>
+                          </summary>
+                          {renderGrid(ungrouped)}
+                        </details>
+                      )}
+                    </>
+                  )}
+              </div>
+            )}
           </>
         )}
       </div>
