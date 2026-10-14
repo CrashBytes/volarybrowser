@@ -11,6 +11,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { TabManager } from './tab-manager';
 import { LoggerFactory } from './utils/logger';
+import { isTranslatableUrl } from './translation/language';
 
 const logger = LoggerFactory.create('ContextMenu');
 
@@ -200,6 +201,25 @@ export function attachContextMenu(view: BrowserView, tabManager: TabManager): vo
       menu.append(new MenuItem({ label: 'Copy', role: 'copy' }));
       menu.append(new MenuItem({ label: 'Paste', role: 'paste' }));
       menu.append(new MenuItem({ label: 'Select All', role: 'selectAll' }));
+      menu.append(new MenuItem({ type: 'separator' }));
+    }
+
+    // Translation (the context menu always comes from the visible, active tab)
+    const translation = tabManager.getTranslationManager();
+    if (translation && isTranslatableUrl(view.webContents.getURL())) {
+      const state = translation.getState();
+      if (state && (state.status === 'translated' || state.status === 'translating')) {
+        menu.append(new MenuItem({
+          label: 'Show Original Page',
+          click: () => { translation.restoreTab().catch(() => {}); },
+        }));
+      } else {
+        const target = state?.targetName ?? 'English';
+        menu.append(new MenuItem({
+          label: `Translate Page to ${target}`,
+          click: () => { translation.translateTab().catch(() => {}); },
+        }));
+      }
       menu.append(new MenuItem({ type: 'separator' }));
     }
 

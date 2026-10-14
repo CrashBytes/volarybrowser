@@ -25,6 +25,7 @@ import type { ForceDarkMode } from './privacy/force-dark-mode';
 import type { ColorblindMode } from './privacy/colorblind-mode';
 import type { FingerprintResistance } from './privacy/fingerprint-resistance';
 import type { CookieManager } from './privacy/cookie-manager';
+import type { TranslationManager } from './translation/translation-manager';
 
 interface ManagedTab {
   view: BrowserView;
@@ -42,6 +43,7 @@ export class TabManager {
   private colorblindMode: ColorblindMode | null = null;
   private fingerprintResistance: FingerprintResistance | null = null;
   private cookieManager: CookieManager | null = null;
+  private translationManager: TranslationManager | null = null;
   private onNavigateCallback: ((url: string, title: string) => void) | null = null;
 
   constructor() {
@@ -69,6 +71,14 @@ export class TabManager {
 
   setCookieManager(cm: CookieManager): void {
     this.cookieManager = cm;
+  }
+
+  setTranslationManager(tm: TranslationManager): void {
+    this.translationManager = tm;
+  }
+
+  getTranslationManager(): TranslationManager | null {
+    return this.translationManager;
   }
 
   /**
@@ -180,6 +190,7 @@ export class TabManager {
 
     // Auto-delete cookies for this tab's domains
     this.cookieManager?.cleanupTab(tabId).catch(() => {});
+    this.translationManager?.onTabClosed(tabId);
 
     this.logger.info('Tab closed', { tabId });
 
@@ -475,6 +486,9 @@ export class TabManager {
       // Track domain for cookie cleanup on tab close
       this.cookieManager?.trackDomain(tabId, url);
 
+      // A new document replaced any translated text
+      this.translationManager?.onNavigated(tabId, url);
+
       // Inject force dark mode CSS
       if (this.forceDarkMode?.isEnabled()) {
         wc.insertCSS(this.forceDarkMode.getCSS()).catch(() => {});
@@ -508,6 +522,14 @@ export class TabManager {
           this.logger.error('Content script injection failed', error as Error, { url });
         });
       }
+    });
+
+    wc.on('did-finish-load', () => {
+      if (wc.isDestroyed() || !this.translationManager) return;
+      const url = wc.getURL();
+      this.translationManager.onPageLoaded(tabId, wc, url).catch((error) => {
+        this.logger.debug('Translation check failed', { tabId, error: (error as Error).message });
+      });
     });
 
     wc.on('did-navigate-in-page', (_event, url) => {
@@ -576,6 +598,9 @@ export class TabManager {
       } else if (input.shift && input.key === 'R' && input.type === 'keyDown') {
         event.preventDefault();
         this.window.webContents.send('toggle-reading-mode');
+      } else if (input.shift && input.key === 'T' && input.type === 'keyDown') {
+        event.preventDefault();
+        this.window.webContents.send('toggle-translate');
       } else if (input.key === 'p' && input.type === 'keyDown') {
         event.preventDefault();
         wc.print();

@@ -54,6 +54,9 @@ import {
   downloadActionSchema,
   settingsGetSchema,
   settingsSetSchema,
+  translateTabSchema,
+  translateSiteSchema,
+  translateLangSchema,
   findStartSchema,
   zodValidator,
 } from './schemas/ipc-schemas';
@@ -67,6 +70,7 @@ import { ExtensionManager } from './extensions/extension-manager';
 import { ReadingMode } from './reading-mode';
 import { ForceDarkMode } from './privacy/force-dark-mode';
 import { ColorblindMode } from './privacy/colorblind-mode';
+import { TranslationManager } from './translation/translation-manager';
 
 /**
  * IPC Handler function signature
@@ -123,6 +127,7 @@ export class IPCHandlers {
   private readingMode: ReadingMode;
   private forceDarkMode: ForceDarkMode;
   private colorblindMode: ColorblindMode;
+  private translationManager: TranslationManager;
   private findInPage: FindInPage;
   private handlers: Map<IPCChannel, HandlerRegistration> = new Map();
 
@@ -144,6 +149,7 @@ export class IPCHandlers {
     readingMode: ReadingMode,
     forceDarkMode: ForceDarkMode,
     colorblindMode: ColorblindMode,
+    translationManager: TranslationManager,
   ) {
     this.logger = LoggerFactory.create('IPCHandlers');
     this.windowManager = windowManager;
@@ -155,6 +161,7 @@ export class IPCHandlers {
     this.readingMode = readingMode;
     this.forceDarkMode = forceDarkMode;
     this.colorblindMode = colorblindMode;
+    this.translationManager = translationManager;
     this.findInPage = new FindInPage(tabManager);
   }
 
@@ -199,6 +206,9 @@ export class IPCHandlers {
 
     // Register reading mode / dark mode handlers
     this.registerViewHandlers();
+
+    // Register page translation handlers
+    this.registerTranslateHandlers();
 
     // Register vault media handlers
     this.registerVaultMediaHandlers();
@@ -711,6 +721,9 @@ export class IPCHandlers {
       channel: IPCChannel.SETTINGS_SET,
       handler: async (_event, payload: { key: string; value: unknown }) => {
         setSetting(payload.key, payload.value);
+        if (payload.key.startsWith('translate')) {
+          this.translationManager.reloadSettings();
+        }
         return { success: true };
       },
       validator: zodValidator(settingsSetSchema),
@@ -816,6 +829,66 @@ export class IPCHandlers {
         mode: this.colorblindMode.getMode(),
         label: this.colorblindMode.getLabel(),
       }),
+    });
+  }
+
+  // -- Page Translation --
+
+  private registerTranslateHandlers(): void {
+    this.register({
+      channel: IPCChannel.TRANSLATE_PAGE,
+      handler: async (_event, payload: { tabId?: string }) => this.translationManager.translateTab(payload.tabId),
+      validator: zodValidator(translateTabSchema),
+      rateLimit: { maxRequests: 30, windowMs: 60_000 },
+    });
+
+    this.register({
+      channel: IPCChannel.TRANSLATE_RESTORE,
+      handler: async (_event, payload: { tabId?: string }) => this.translationManager.restoreTab(payload.tabId),
+      validator: zodValidator(translateTabSchema),
+    });
+
+    this.register({
+      channel: IPCChannel.TRANSLATE_TOGGLE,
+      handler: async (_event, payload: { tabId?: string }) => this.translationManager.toggle(payload.tabId),
+      validator: zodValidator(translateTabSchema),
+      rateLimit: { maxRequests: 30, windowMs: 60_000 },
+    });
+
+    this.register({
+      channel: IPCChannel.TRANSLATE_GET_STATE,
+      handler: async (_event, payload: { tabId?: string }) => this.translationManager.getState(payload.tabId),
+      validator: zodValidator(translateTabSchema),
+    });
+
+    this.register({
+      channel: IPCChannel.TRANSLATE_DISMISS,
+      handler: async (_event, payload: { tabId?: string }) => this.translationManager.dismiss(payload.tabId),
+      validator: zodValidator(translateTabSchema),
+    });
+
+    this.register({
+      channel: IPCChannel.TRANSLATE_NEVER_SITE,
+      handler: async (_event, payload: { host?: string; tabId?: string }) => ({
+        host: await this.translationManager.addNeverSite(payload.host, payload.tabId),
+      }),
+      validator: zodValidator(translateSiteSchema),
+    });
+
+    this.register({
+      channel: IPCChannel.TRANSLATE_ALWAYS_LANG,
+      handler: async (_event, payload: { lang: string; tabId?: string }) => ({
+        lang: await this.translationManager.addAlwaysLang(payload.lang, payload.tabId),
+      }),
+      validator: zodValidator(translateLangSchema),
+    });
+
+    this.register({
+      channel: IPCChannel.TRANSLATE_NEVER_LANG,
+      handler: async (_event, payload: { lang: string }) => ({
+        lang: await this.translationManager.addNeverLang(payload.lang),
+      }),
+      validator: zodValidator(translateLangSchema),
     });
   }
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { BackIcon, ForwardIcon, ReloadIcon, StopIcon, LockIcon, UnlockIcon, ReaderIcon, MoonIcon, EyeIcon, BookmarkIcon, BookmarkFilledIcon, GearIcon } from '../../assets/icons/NavIcons';
+import { BackIcon, ForwardIcon, ReloadIcon, StopIcon, LockIcon, UnlockIcon, ReaderIcon, MoonIcon, EyeIcon, BookmarkIcon, BookmarkFilledIcon, GearIcon, TranslateIcon } from '../../assets/icons/NavIcons';
+import { useBrowserStore } from '../../store/browser-store';
 import './AddressBar.css';
 
 interface BookmarkResult {
@@ -39,6 +40,13 @@ export const AddressBar: React.FC<AddressBarProps> = ({
   const [colorblindLabel, setColorblindLabel] = useState('Off');
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const translateState = useBrowserStore((s) => (s.activeTabId ? s.translate[s.activeTabId] : undefined));
+  const translateActive = translateState?.status === 'translated' || translateState?.status === 'translating';
+  const translateTitle = translateState?.status === 'translated'
+    ? `Show original (${translateState.sourceName ?? 'original'})`
+    : translateState?.status === 'translating'
+      ? 'Translating...'
+      : `Translate page to ${translateState?.targetName ?? 'English'} (Cmd+Shift+T)`;
 
   // Sync external URL changes when not focused
   useEffect(() => {
@@ -274,6 +282,16 @@ export const AddressBar: React.FC<AddressBarProps> = ({
           aria-label="Toggle reading mode"
         >
           <ReaderIcon />
+        </button>
+        <button
+          className={`address-bar__btn${translateActive ? ' address-bar__btn--active' : ''}`}
+          onClick={() => { window.volary.translate.toggle().catch(() => {}); }}
+          disabled={!url || !/^https?:/i.test(url)}
+          title={translateTitle}
+          aria-label={translateActive ? 'Show original page' : 'Translate page'}
+          aria-pressed={translateActive}
+        >
+          <TranslateIcon />
         </button>
         <button
           className={`address-bar__btn${darkModeActive ? ' address-bar__btn--active' : ''}`}
