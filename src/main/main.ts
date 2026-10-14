@@ -38,6 +38,7 @@ import { HeaderPrivacy } from './privacy/header-privacy';
 import { PermissionHandler } from './permission-dialog';
 import { CrashRecovery } from './crash-recovery';
 import { AppMenu } from './app-menu';
+import { setMediaVault } from './context-menu';
 import { setSearchEngine } from './utils/url-validator';
 import { getSetting } from '../../core/storage/repositories/settings';
 import { ReadingMode } from './reading-mode';
@@ -389,6 +390,14 @@ class VolaryBrowser {
 
       // Initialize vault manager (encrypted storage)
       await this.vaultManager.initialize();
+      setMediaVault(this.vaultManager.getMediaVault(), () => {
+        this.ipcHandlers.send('vault:request-unlock', null);
+      });
+      // Auto-lock (inactivity, sleep, screen lock) must reach the UI too, so an
+      // open media gallery drops its decrypted previews.
+      this.vaultManager.onStatusChange((status) => {
+        this.ipcHandlers.send('vault:status-changed', status);
+      });
       this.logger.debug('Vault manager initialized');
 
       // Initialize extension system

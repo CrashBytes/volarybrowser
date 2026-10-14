@@ -359,8 +359,9 @@ const api = {
    */
   vaultMedia: {
     list: async () => ipcRenderer.invoke('vault:media-list'),
-    open: async (filePath: string) => ipcRenderer.invoke('vault:media-open', { path: filePath }),
-    delete: async (filePath: string) => ipcRenderer.invoke('vault:media-delete', { path: filePath }),
+    read: async (id: string) => ipcRenderer.invoke('vault:media-read', { id }),
+    export: async (id: string) => ipcRenderer.invoke('vault:media-export', { id }),
+    delete: async (id: string) => ipcRenderer.invoke('vault:media-delete', { id }),
   },
 
   /**
@@ -504,6 +505,8 @@ const api = {
       'toggle-bookmark',
       'toggle-bookmarks-bar',
       'set-colorblind',
+      'open-vault-media',
+      'vault:request-unlock',
     ];
 
     if (!allowedChannels.includes(channel)) {

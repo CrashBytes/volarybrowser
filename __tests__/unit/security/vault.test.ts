@@ -186,3 +186,22 @@ describe('Vault', () => {
     });
   });
 });
+
+describe('Vault key stability', () => {
+  it('data encrypted after the rotation threshold still decrypts after lock and unlock', async () => {
+    const vault = new Vault({
+      kdf: { algorithm: 'argon2id', memoryCost: 1024, timeCost: 1, parallelism: 1 },
+      rotation: { maxOperations: 2, maxDuration: 86400 },
+    });
+    await vault.initialize('my-secure-passphrase-123');
+
+    const first = await vault.encrypt(Buffer.from('first'), 'media');
+    await vault.encrypt(Buffer.from('second'), 'media');
+    const third = await vault.encrypt(Buffer.from('third'), 'media'); // crosses maxOperations
+
+    vault.lock();
+    expect(await vault.unlock('my-secure-passphrase-123')).toBe(true);
+    expect((await vault.decrypt(first)).toString()).toBe('first');
+    expect((await vault.decrypt(third)).toString()).toBe('third');
+  });
+});

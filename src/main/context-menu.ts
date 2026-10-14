@@ -6,57 +6,97 @@
  * @module context-menu
  */
 
-import { Menu, MenuItem, BrowserView, clipboard, dialog, app } from 'electron';
+import { Menu, MenuItem, BrowserView, clipboard, dialog, net } from 'electron';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { TabManager } from './tab-manager';
 import { LoggerFactory } from './utils/logger';
 import { isTranslatableUrl } from './translation/language';
+import { MediaVault, MediaKind, VaultLockedError, guessMedia } from './security/media-vault';
 
 const logger = LoggerFactory.create('ContextMenu');
 
-/** Directory where vault media is saved */
-function getVaultMediaDir(): string {
-  return path.join(app.getPath('userData'), 'vault', 'media');
-}
+let mediaVault: MediaVault | null = null;
+let requestVaultUnlock: (() => void) | null = null;
 
 /**
- * Download a URL and save it to the vault media directory
+ * Wire the encrypted media store used by "Save ... to Vault", plus a callback
+ * that asks the UI to show the unlock prompt when the vault is locked.
  */
-async function saveMediaToVault(url: string, type: 'image' | 'video'): Promise<string | null> {
+export function setMediaVault(vault: MediaVault, onLocked: () => void): void {
+  mediaVault = vault;
+  requestVaultUnlock = onLocked;
+}
+
+type SaveOutcome = { ok: true; name: string } | { ok: false; locked: boolean; message: string };
+
+/**
+ * Download a URL and store it encrypted in the vault. Plaintext never touches disk.
+ */
+async function saveMediaToVault(url: string, type: MediaKind): Promise<SaveOutcome> {
+  if (!mediaVault) {
+    return { ok: false, locked: false, message: 'Vault is not available' };
+  }
+  if (!mediaVault.isUnlocked()) {
+    return { ok: false, locked: true, message: 'Unlock the vault to save media' };
+  }
   try {
-    const mediaDir = getVaultMediaDir();
-    await fs.mkdir(mediaDir, { recursive: true });
-
-    // Extract filename from URL
     const urlObj = new URL(url);
-    let filename = path.basename(urlObj.pathname) || `${type}-${Date.now()}`;
+    let filename = decodeURIComponent(path.basename(urlObj.pathname)) || `${type}-${Date.now()}`;
 
-    // Ensure it has an extension
+    const response = await net.fetch(url);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const bytes = Buffer.from(await response.arrayBuffer());
+
+    const headerMime = (response.headers.get('content-type') ?? '').split(';')[0]?.trim().toLowerCase() ?? '';
+    const guessed = guessMedia(filename);
+    const mime = headerMime && headerMime !== 'application/octet-stream' ? headerMime : guessed.mime;
     if (!path.extname(filename)) {
-      filename += type === 'image' ? '.png' : '.mp4';
+      const ext = mime.split('/')[1]?.replace('jpeg', 'jpg').replace('quicktime', 'mov').replace('svg+xml', 'svg');
+      filename += ext ? `.${ext}` : '';
     }
 
-    // Make filename unique
-    const timestamp = Date.now();
-    const ext = path.extname(filename);
-    const base = path.basename(filename, ext);
-    const saveName = `${base}-${timestamp}${ext}`;
-    const savePath = path.join(mediaDir, saveName);
-
-    // Download the file
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const buffer = Buffer.from(await response.arrayBuffer());
-
-    await fs.writeFile(savePath, buffer);
-    logger.info(`${type} saved to vault`, { savePath, size: buffer.length });
-
-    return savePath;
+    const entry = await mediaVault.save({ name: filename, type, mime, bytes, sourceUrl: url });
+    logger.info(`${type} saved to vault`, { id: entry.id, size: entry.size });
+    return { ok: true, name: entry.name };
   } catch (error) {
+    if (error instanceof VaultLockedError) {
+      return { ok: false, locked: true, message: 'Unlock the vault to save media' };
+    }
     logger.error(`Failed to save ${type} to vault`, error as Error, { url });
-    return null;
+    return { ok: false, locked: false, message: (error as Error).message };
   }
+}
+
+async function reportSave(outcome: SaveOutcome, label: string): Promise<void> {
+  if (outcome.ok) {
+    await dialog.showMessageBox({
+      type: 'info',
+      title: `${label} Saved`,
+      message: `${label} encrypted and saved to vault`,
+      detail: outcome.name,
+    });
+    return;
+  }
+  if (outcome.locked) {
+    const { response } = await dialog.showMessageBox({
+      type: 'warning',
+      title: 'Vault Locked',
+      message: 'Unlock the vault to save media',
+      detail: 'Saved media is encrypted with your vault password. Unlock the vault, then save again.',
+      buttons: ['Unlock Vault', 'Cancel'],
+      defaultId: 0,
+      cancelId: 1,
+    });
+    if (response === 0) requestVaultUnlock?.();
+    return;
+  }
+  await dialog.showMessageBox({
+    type: 'error',
+    title: 'Save Failed',
+    message: `Failed to save ${label.toLowerCase()} to vault`,
+    detail: outcome.message,
+  });
 }
 
 /**
@@ -92,21 +132,7 @@ export function attachContextMenu(view: BrowserView, tabManager: TabManager): vo
       menu.append(new MenuItem({
         label: 'Save Image to Vault',
         click: async () => {
-          const saved = await saveMediaToVault(params.srcURL, 'image');
-          if (saved) {
-            dialog.showMessageBox({
-              type: 'info',
-              title: 'Image Saved',
-              message: 'Image saved to vault',
-              detail: path.basename(saved),
-            });
-          } else {
-            dialog.showMessageBox({
-              type: 'error',
-              title: 'Save Failed',
-              message: 'Failed to save image to vault',
-            });
-          }
+          await reportSave(await saveMediaToVault(params.srcURL, 'image'), 'Image');
         },
       }));
       menu.append(new MenuItem({
@@ -136,22 +162,8 @@ export function attachContextMenu(view: BrowserView, tabManager: TabManager): vo
       menu.append(new MenuItem({
         label: `Save ${params.mediaType === 'video' ? 'Video' : 'Audio'} to Vault`,
         click: async () => {
-          const type = params.mediaType === 'video' ? 'video' : 'image';
-          const saved = await saveMediaToVault(params.srcURL, type);
-          if (saved) {
-            dialog.showMessageBox({
-              type: 'info',
-              title: `${params.mediaType === 'video' ? 'Video' : 'Audio'} Saved`,
-              message: `${params.mediaType === 'video' ? 'Video' : 'Audio'} saved to vault`,
-              detail: path.basename(saved),
-            });
-          } else {
-            dialog.showMessageBox({
-              type: 'error',
-              title: 'Save Failed',
-              message: `Failed to save ${params.mediaType} to vault`,
-            });
-          }
+          const kind: MediaKind = params.mediaType === 'video' ? 'video' : 'audio';
+          await reportSave(await saveMediaToVault(params.srcURL, kind), kind === 'video' ? 'Video' : 'Audio');
         },
       }));
       menu.append(new MenuItem({

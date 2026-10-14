@@ -22,6 +22,11 @@ module.exports = merge(common, {
   target: 'web',
   resolve: {
     fallback: {
+      // Exact entry first: webpack-dev-server's ESM client imports
+      // 'process/browser' without an extension, which ESM resolution rejects,
+      // so it falls through to these fallbacks. The bare 'process' key matches
+      // by prefix and would rewrite it to '.../process/browser.js/browser'.
+      'process/browser': require.resolve('process/browser'),
       process: require.resolve('process/browser'),
     },
   },
@@ -68,7 +73,7 @@ module.exports = merge(common, {
       meta: isDevelopment ? {
         'Content-Security-Policy': {
           'http-equiv': 'Content-Security-Policy',
-          content: "default-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:*; script-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src 'self' ws://localhost:*; img-src 'self' data: https: http://localhost:*;",
+          content: "default-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:*; script-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src 'self' ws://localhost:*; img-src 'self' data: blob: https: http://localhost:*; media-src 'self' blob:;",
         },
       } : {},
     }),

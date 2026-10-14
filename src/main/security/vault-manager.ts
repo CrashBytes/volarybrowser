@@ -29,6 +29,7 @@ import { Vault, VaultStatus, AuthenticationLevel } from '../../../core/security/
 import { ILogger } from '../types';
 import { LoggerFactory } from '../utils/logger';
 import { config } from '../config';
+import { MediaVault } from './media-vault';
 
 /**
  * Vault metadata file structure
@@ -85,6 +86,9 @@ export class VaultManager {
    */
   private statusChangeListeners: Array<(status: VaultStatusInfo) => void> = [];
 
+  /** Encrypted media store, keyed by this vault's passphrase */
+  private mediaVault: MediaVault;
+
   constructor() {
     this.logger = LoggerFactory.create('VaultManager');
     this.vault = new Vault();
@@ -92,6 +96,7 @@ export class VaultManager {
     // Determine vault storage location from config singleton
     this.vaultPath = path.join(config.app.vaultPath, 'vault.db');
     this.metadataPath = path.join(config.app.vaultPath, 'metadata.json');
+    this.mediaVault = new MediaVault(this.vault, path.join(config.app.vaultPath, 'media'));
 
     this.logger.info('VaultManager initialized', {
       vaultPath: this.vaultPath,
@@ -160,6 +165,7 @@ export class VaultManager {
       // create a fresh vault instance
       if (this.vault.getStatus() !== VaultStatus.UNINITIALIZED) {
         this.vault = new Vault();
+        this.mediaVault = new MediaVault(this.vault, this.mediaVault.getDirectory());
       }
 
       // Validate password
@@ -177,6 +183,7 @@ export class VaultManager {
       await this.saveMetadata();
 
       this.logger.info('Vault initialized successfully');
+      await this.encryptLegacyMedia();
       this.emitStatusChange();
       this.resetInactivityTimer();
 
@@ -224,6 +231,7 @@ export class VaultManager {
 
       if (unlocked) {
         this.logger.info('Vault unlocked successfully');
+        await this.encryptLegacyMedia();
         this.emitStatusChange();
         this.resetInactivityTimer();
         
@@ -490,6 +498,29 @@ export class VaultManager {
    */
   onStatusChange(listener: (status: VaultStatusInfo) => void): void {
     this.statusChangeListeners.push(listener);
+  }
+
+  /**
+   * Encrypted media store. Every call on it throws VaultLockedError while
+   * the vault is locked.
+   */
+  getMediaVault(): MediaVault {
+    return this.mediaVault;
+  }
+
+  /**
+   * Media saved before the vault encrypted it sits in the media directory as
+   * plaintext. Encrypt it the first time the passphrase is available.
+   */
+  private async encryptLegacyMedia(): Promise<void> {
+    try {
+      const count = await this.mediaVault.migrateLegacy();
+      if (count > 0) {
+        this.logger.info('Encrypted legacy plaintext media', { count });
+      }
+    } catch (error) {
+      this.logger.error('Legacy media migration failed', error as Error);
+    }
   }
 
   /**

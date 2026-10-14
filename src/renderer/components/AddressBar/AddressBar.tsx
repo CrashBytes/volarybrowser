@@ -55,15 +55,11 @@ export const AddressBar: React.FC<AddressBarProps> = ({
     }
   }, [url, isFocused]);
 
-  // Load toolbar states on mount and listen for bookmark toggle from menu
+  // Load toolbar states on mount
   useEffect(() => {
     window.volary?.darkMode?.getStatus().then((r: { enabled?: boolean }) => setDarkModeActive(r?.enabled ?? false)).catch(() => {});
     window.volary?.colorblind?.getStatus().then((r: { label?: string }) => setColorblindLabel(r?.label ?? 'Off')).catch(() => {});
-
-    const handleMenuBookmark = () => toggleBookmark();
-    window.addEventListener('volary:toggle-bookmark', handleMenuBookmark);
-    return () => window.removeEventListener('volary:toggle-bookmark', handleMenuBookmark);
-  }, [toggleBookmark]);
+  }, []);
 
   // Reset reader mode state when URL changes (navigating away exits reader)
   useEffect(() => {
@@ -101,6 +97,15 @@ export const AddressBar: React.FC<AddressBarProps> = ({
       console.error('[AddressBar] Bookmark toggle failed:', err);
     }
   }, [url, isBookmarked]);
+
+  // Listen for bookmark toggle from the app menu. Declared after
+  // toggleBookmark: the dependency array is evaluated during render, so
+  // referencing the const above its declaration throws (temporal dead zone).
+  useEffect(() => {
+    const handleMenuBookmark = () => toggleBookmark();
+    window.addEventListener('volary:toggle-bookmark', handleMenuBookmark);
+    return () => window.removeEventListener('volary:toggle-bookmark', handleMenuBookmark);
+  }, [toggleBookmark]);
 
   const fetchSuggestions = (query: string) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
