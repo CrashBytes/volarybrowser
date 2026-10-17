@@ -15,6 +15,7 @@ import { isTranslatableUrl } from './translation/language';
 import { MediaVault, MediaKind, VaultLockedError, guessMedia } from './security/media-vault';
 import { mediaSniffer } from './media/media-sniffer';
 import { readMp4Info, matchesElement } from './media/mp4-info';
+import { PAGE_IMAGES_SCRIPT, PageImage, pickPageImages, summarizeBatch, mapLimit } from './media/page-images';
 
 const logger = LoggerFactory.create('ContextMenu');
 
@@ -57,13 +58,15 @@ const PROBE_WORLD_ID = 1999;
 // Busy players (TikTok) can hold the page's main thread for a while
 const PROBE_TIMEOUT_MS = 1500;
 const STREAM_CANDIDATE_LIMIT = 12;
+// Long galleries have hundreds of images; keep a few downloads in flight
+const SAVE_ALL_CONCURRENCY = 4;
 
 /**
  * Find the image/video/audio under the cursor even when the site covers it
  * with a transparent overlay (TikTok, Instagram), which hides it from
  * Chromium's own hit test.
  */
-async function probeMediaAt(view: BrowserView, x: number, y: number): Promise<{ media: PageMedia | null; image: PageMedia | null }> {
+async function probeMediaAt(view: BrowserView, x: number, y: number): Promise<{ media: PageMedia | null; image: PageMedia | null; hasImages: boolean }> {
   const zoom = view.webContents.getZoomFactor() || 1;
   const code = `(() => {
     const x = ${Number(x) / zoom}, y = ${Number(y) / zoom};
@@ -84,7 +87,8 @@ async function probeMediaAt(view: BrowserView, x: number, y: number): Promise<{ 
     const hit = (el) => { const r = el.getBoundingClientRect(); return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom; };
     const found = [...document.elementsFromPoint(x, y), ...[...document.querySelectorAll('video, audio, img')].filter(hit)]
       .map(describe).filter(Boolean);
-    return { media: found.find((m) => m.type !== 'image') || null, image: found.find((m) => m.type === 'image') || null };
+    return { media: found.find((m) => m.type !== 'image') || null, image: found.find((m) => m.type === 'image') || null,
+      hasImages: document.images.length > 0 };
   })()`;
   const valid = (m: unknown): PageMedia | null => {
     const media = m as PageMedia | null;
@@ -94,12 +98,12 @@ async function probeMediaAt(view: BrowserView, x: number, y: number): Promise<{ 
     const result = await Promise.race([
       view.webContents.executeJavaScriptInIsolatedWorld(PROBE_WORLD_ID, [{ code }]),
       new Promise<null>((resolve) => setTimeout(() => resolve(null), PROBE_TIMEOUT_MS)),
-    ]) as { media?: unknown; image?: unknown } | null;
+    ]) as { media?: unknown; image?: unknown; hasImages?: unknown } | null;
     if (!result) logger.warn('Media probe timed out');
-    return { media: valid(result?.media), image: valid(result?.image) };
+    return { media: valid(result?.media), image: valid(result?.image), hasImages: result?.hasImages === true };
   } catch (error) {
     logger.warn('Media probe failed', { error: (error as Error).message });
-    return { media: null, image: null };
+    return { media: null, image: null, hasImages: false };
   }
 }
 
@@ -200,6 +204,58 @@ async function reportSave(outcome: SaveOutcome, label: string): Promise<void> {
 }
 
 /**
+ * Save every image on the page to the vault, one copy per URL, skipping
+ * images the vault already holds from the same URL. Reports once with a toast.
+ */
+export async function saveAllImagesToVault(view: BrowserView): Promise<void> {
+  if (!mediaVault) {
+    await reportSave({ ok: false, locked: false, message: 'Vault is not available' }, 'Images');
+    return;
+  }
+  if (!mediaVault.isUnlocked()) {
+    await reportSave({ ok: false, locked: true, message: 'Unlock the vault to save media' }, 'Images');
+    return;
+  }
+
+  let found: PageImage[] = [];
+  try {
+    const raw = await view.webContents.executeJavaScriptInIsolatedWorld(PROBE_WORLD_ID, [{ code: PAGE_IMAGES_SCRIPT }]) as unknown;
+    found = (Array.isArray(raw) ? raw : []).filter((i): i is PageImage => !!i && typeof (i as PageImage).src === 'string');
+  } catch (error) {
+    logger.warn('Page image probe failed', { error: (error as Error).message });
+  }
+
+  let inVault = new Set<string>();
+  try {
+    inVault = new Set((await mediaVault.list()).flatMap((e) => (e.sourceUrl ? [e.sourceUrl] : [])));
+  } catch (error) {
+    if (error instanceof VaultLockedError) {
+      await reportSave({ ok: false, locked: true, message: 'Unlock the vault to save media' }, 'Images');
+      return;
+    }
+    logger.warn('Could not list vault media; saving without duplicate check', { error: (error as Error).message });
+  }
+
+  const { images, skipped } = pickPageImages(found, inVault);
+  logger.info('Saving page images to vault', { found: found.length, saving: images.length, skipped });
+  if (images.length) showToast?.(`Saving ${images.length} image${images.length === 1 ? '' : 's'} to vault...`);
+
+  let locked = false;
+  const outcomes = await mapLimit(images, SAVE_ALL_CONCURRENCY, async (image) => {
+    if (locked) return false;
+    const outcome = await saveMediaToVault({ type: 'image', src: image.src, duration: 0, width: image.width, height: image.height }, view);
+    if (!outcome.ok && outcome.locked) locked = true;
+    return outcome.ok;
+  });
+  if (locked) {
+    await reportSave({ ok: false, locked: true, message: 'Unlock the vault to save media' }, 'Images');
+    return;
+  }
+  const saved = outcomes.filter(Boolean).length;
+  showToast?.(summarizeBatch({ saved, failed: outcomes.length - saved, skipped }));
+}
+
+/**
  * Attach a context menu handler to a BrowserView's webContents
  */
 export function attachContextMenu(view: BrowserView, tabManager: TabManager): void {
@@ -266,8 +322,16 @@ export function attachContextMenu(view: BrowserView, tabManager: TabManager): vo
           }
         },
       }));
-      menu.append(new MenuItem({ type: 'separator' }));
     }
+
+    // Any page with images
+    if (probed.hasImages) {
+      menu.append(new MenuItem({
+        label: 'Save All Images to Vault',
+        click: () => { saveAllImagesToVault(view).catch((error) => logger.error('Save all images failed', error as Error)); },
+      }));
+    }
+    if (image || probed.hasImages) menu.append(new MenuItem({ type: 'separator' }));
 
     // Video/media context
     if (media) {
