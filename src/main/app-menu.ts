@@ -13,6 +13,7 @@ import { saveSession, listSessions, getSession } from '../../core/storage/reposi
 import { getRecentHistory, deleteAllHistory } from '../../core/storage/repositories/history';
 import { ILogger } from './types';
 import { LoggerFactory } from './utils/logger';
+import { saveAllImagesToVault } from './context-menu';
 
 export interface MenuConfig {
   historyEnabled: boolean;
@@ -332,6 +333,14 @@ export class AppMenu {
             ],
           },
           { type: 'separator' },
+          {
+            label: 'Save All Images on Page to Vault',
+            accelerator: 'CmdOrCtrl+Shift+M',
+            click: () => {
+              const tab = this.tabManager.getActiveTab();
+              if (tab) saveAllImagesToVault(tab.view).catch((error) => this.logger.error('Save all images failed', error as Error));
+            },
+          },
           {
             label: 'Saved Media (Vault)',
             click: () => send('open-vault-media'),
