@@ -27,7 +27,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-latest
+          # Pinned: signing fails on the macos-26 image (keychain unlock error)
+          - os: macos-15
             platform: mac
           - os: ubuntu-latest
             platform: linux
