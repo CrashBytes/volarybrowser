@@ -11,7 +11,7 @@ import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import type { TranslateTabState } from '../../shared/translation';
 
-interface TabState {
+export interface TabState {
   id: string;
   url: string;
   title: string;
@@ -20,6 +20,9 @@ interface TabState {
   canGoBack: boolean;
   canGoForward: boolean;
   isActive: boolean;
+  isAudioPlaying: boolean;
+  isMuted: boolean;
+  isPinned: boolean;
   createdAt: number;
 }
 
@@ -28,6 +31,8 @@ interface VaultStatus {
   hasVault: boolean;
   isLoading: boolean;
   skipped?: boolean;
+  /** Locked after having been unlocked: the prompt can no longer be skipped. */
+  requiresUnlock?: boolean;
 }
 
 interface DownloadState {

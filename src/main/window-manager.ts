@@ -292,7 +292,7 @@ export class WindowManager implements IWindowManager {
       isFullScreen: window.isFullScreen(),
     };
 
-    this.logger.debug('Saving window state', state);
+    this.logger.debug('Saving window state', { ...state });
 
     try {
       dbSaveWindowState({

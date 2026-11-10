@@ -69,7 +69,7 @@ import { saveSession, listSessions, getSession, deleteSession } from '../../core
 import { ExtensionManager } from './extensions/extension-manager';
 import { ReadingMode } from './reading-mode';
 import { ForceDarkMode } from './privacy/force-dark-mode';
-import { ColorblindMode } from './privacy/colorblind-mode';
+import { ColorblindMode, COLORBLIND_TYPES } from './privacy/colorblind-mode';
 import { TranslationManager } from './translation/translation-manager';
 
 /**
@@ -275,7 +275,7 @@ export class IPCHandlers {
 
     // Register with Electron's IPC system
     ipcMain.handle(channel, wrappedHandler);
-    this.handlers.set(channel, registration);
+    this.handlers.set(channel, registration as unknown as HandlerRegistration);
 
     this.logger.debug('Registered IPC handler', { channel });
   }
@@ -380,7 +380,7 @@ export class IPCHandlers {
     // Vault initialization (first-time setup)
     this.register({
       channel: IPCChannel.VAULT_INITIALIZE,
-      handler: async (event, payload: { password: string; authLevel?: number }) => {
+      handler: async (_event, payload: { password: string; authLevel?: number }) => {
         this.logger.info('Vault initialization requested', { 
           authLevel: payload.authLevel || 1 
         });
@@ -408,7 +408,7 @@ export class IPCHandlers {
     // Vault unlock
     this.register({
       channel: IPCChannel.VAULT_UNLOCK,
-      handler: async (event, payload: { password: string }) => {
+      handler: async (_event, payload: { password: string }) => {
         this.logger.info('Vault unlock requested');
         
         const result = await this.vaultManager.unlock(payload.password);
@@ -818,7 +818,9 @@ export class IPCHandlers {
     this.register({
       channel: IPCChannel.COLORBLIND_SET,
       handler: async (_event, payload: { mode: string }) => {
-        this.colorblindMode.setMode(payload.mode);
+        // The mode comes from the renderer: only accept a known one.
+        const mode = COLORBLIND_TYPES.find((m) => m === payload.mode);
+        if (mode) this.colorblindMode.setMode(mode);
         return { mode: this.colorblindMode.getMode(), label: this.colorblindMode.getLabel() };
       },
     });

@@ -64,6 +64,11 @@ interface VaultStatusInfo {
   isUnlocked: boolean;
   hasVault: boolean;
   authLevel: AuthenticationLevel | null;
+  /**
+   * The vault was unlocked this session and has locked since. The browser
+   * must hide its content and demand the password before showing it again.
+   */
+  requiresUnlock: boolean;
 }
 
 /**
@@ -79,6 +84,10 @@ export class VaultManager {
   private metadataPath: string;
   private inactivityTimer: NodeJS.Timeout | null = null;
   private readonly INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
+  private readonly IDLE_POLL_MS = 15 * 1000;
+
+  /** Set once the vault has been unlocked; a later lock then gates the UI. */
+  private unlockedThisSession = false;
 
   /**
    * Event emitter for vault status changes
@@ -127,7 +136,7 @@ export class VaultManager {
       this.registerSystemHandlers();
 
       // Start inactivity timer
-      this.resetInactivityTimer();
+      this.restartIdleWatch();
 
       this.logger.info('VaultManager initialization complete', {
         hasVault: await this.hasVault(),
@@ -183,9 +192,10 @@ export class VaultManager {
       await this.saveMetadata();
 
       this.logger.info('Vault initialized successfully');
+      this.unlockedThisSession = true;
       await this.encryptLegacyMedia();
       this.emitStatusChange();
-      this.resetInactivityTimer();
+      this.restartIdleWatch();
 
       return {
         success: true,
@@ -231,9 +241,10 @@ export class VaultManager {
 
       if (unlocked) {
         this.logger.info('Vault unlocked successfully');
+        this.unlockedThisSession = true;
         await this.encryptLegacyMedia();
         this.emitStatusChange();
-        this.resetInactivityTimer();
+        this.restartIdleWatch();
         
         return {
           success: true,
@@ -290,8 +301,10 @@ export class VaultManager {
    */
   getStatus(): VaultStatusInfo {
     const status = this.vault.getStatus();
+    const isUnlocked = status === VaultStatus.UNLOCKED;
     return {
-      isUnlocked: status === VaultStatus.UNLOCKED,
+      isUnlocked,
+      requiresUnlock: !isUnlocked && this.unlockedThisSession,
       // Use both internal state AND file existence to determine if vault exists
       hasVault: status !== VaultStatus.UNINITIALIZED || this.metadataExistsSync(),
       authLevel: this.vault.getAuthLevel(),
@@ -436,13 +449,11 @@ export class VaultManager {
       this.lock();
     });
 
-    // Lock vault on screen lock (if available)
-    if (powerMonitor.getSystemIdleState) {
-      powerMonitor.on('lock-screen', () => {
-        this.logger.info('Screen locked - locking vault');
-        this.lock();
-      });
-    }
+    // Lock vault on screen lock
+    powerMonitor.on('lock-screen', () => {
+      this.logger.info('Screen locked - locking vault');
+      this.lock();
+    });
 
     // Lock vault before application quit
     app.on('before-quit', () => {
@@ -454,21 +465,22 @@ export class VaultManager {
   }
 
   /**
-   * Reset inactivity timer
-   * 
-   * Called on vault unlock and user activity
+   * Watch for user idleness while the vault is unlocked.
+   *
+   * Polls the OS idle time (keyboard/mouse, system-wide) and locks once it
+   * reaches the timeout. A plain timer started at unlock would lock in the
+   * middle of active use.
    */
-  private resetInactivityTimer(): void {
-    // Clear existing timer
+  restartIdleWatch(): void {
     this.clearInactivityTimer();
 
-    // Start new timer
-    this.inactivityTimer = setTimeout(() => {
-      if (this.vault.getStatus() === VaultStatus.UNLOCKED) {
+    this.inactivityTimer = setInterval(() => {
+      if (this.vault.getStatus() !== VaultStatus.UNLOCKED) return;
+      if (powerMonitor.getSystemIdleTime() * 1000 >= this.INACTIVITY_TIMEOUT_MS) {
         this.logger.info('Inactivity timeout - locking vault');
         this.lock();
       }
-    }, this.INACTIVITY_TIMEOUT_MS);
+    }, this.IDLE_POLL_MS);
   }
 
   /**
@@ -476,7 +488,7 @@ export class VaultManager {
    */
   private clearInactivityTimer(): void {
     if (this.inactivityTimer) {
-      clearTimeout(this.inactivityTimer);
+      clearInterval(this.inactivityTimer);
       this.inactivityTimer = null;
     }
   }

@@ -58,7 +58,7 @@ export function saveDoHSettings(settings: DoHSettings): void {
     const userDataPath = app.getPath('userData');
     const settingsPath = path.join(userDataPath, 'doh-settings.json');
     fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
-    logger.info('DoH settings saved (restart required)', settings);
+    logger.info('DoH settings saved (restart required)', { ...settings });
   } catch (error) {
     logger.error('Failed to save DoH settings', error as Error);
   }
@@ -87,7 +87,7 @@ export function applyDoHConfig(): void {
   if (settings.provider === 'custom' && settings.customUrl) {
     template = settings.customUrl;
   } else {
-    template = DOH_PROVIDERS[settings.provider] || DOH_PROVIDERS.cloudflare;
+    template = (DOH_PROVIDERS[settings.provider] || DOH_PROVIDERS['cloudflare']) as string;
   }
 
   app.commandLine.appendSwitch('enable-features', 'DnsOverHttps');

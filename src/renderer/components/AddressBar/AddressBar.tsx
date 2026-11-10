@@ -3,10 +3,6 @@ import { BackIcon, ForwardIcon, ReloadIcon, StopIcon, LockIcon, UnlockIcon, Read
 import { useBrowserStore } from '../../store/browser-store';
 import './AddressBar.css';
 
-interface BookmarkResult {
-  id?: string;
-}
-
 interface AddressBarProps {
   url: string;
   isLoading: boolean;
@@ -81,7 +77,7 @@ export const AddressBar: React.FC<AddressBarProps> = ({
     if (!url) return;
     try {
       if (isBookmarked) {
-        const result = await window.volary.bookmarks.isBookmarked(url) as BookmarkResult;
+        const result = await window.volary.bookmarks.isBookmarked(url);
         if (result?.id) {
           await window.volary.bookmarks.delete(result.id);
         }

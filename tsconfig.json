@@ -10,6 +10,8 @@
     /* Modules */
     "module": "ESNext",
     "moduleResolution": "bundler",
+    /* better-sqlite3-multiple-ciphers ships types outside its "exports" map */
+    "resolvePackageJsonExports": false,
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,

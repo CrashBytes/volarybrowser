@@ -128,7 +128,7 @@ const api = {
      * 
      * @returns Promise resolving to vault status
      */
-    getStatus: async (): Promise<{ isUnlocked: boolean; hasVault: boolean }> => {
+    getStatus: async (): Promise<{ isUnlocked: boolean; hasVault: boolean; requiresUnlock?: boolean }> => {
       return ipcRenderer.invoke('vault:status');
     },
   },

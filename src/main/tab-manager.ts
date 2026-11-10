@@ -27,6 +27,11 @@ import type { FingerprintResistance } from './privacy/fingerprint-resistance';
 import type { CookieManager } from './privacy/cookie-manager';
 import type { TranslationManager } from './translation/translation-manager';
 
+/** WebContents.destroy() exists at runtime but is missing from Electron's typings. */
+function destroyWebContents(wc: Electron.WebContents): void {
+  (wc as unknown as { destroy(): void }).destroy();
+}
+
 interface ManagedTab {
   view: BrowserView;
   state: TabState;
@@ -38,6 +43,7 @@ export class TabManager {
   private activeTabId: string | null = null;
   private window: BrowserWindow | null = null;
   private viewBounds: Electron.Rectangle = { x: 0, y: 88, width: 1280, height: 680 };
+  private contentLocked = false;
   private contentScriptInjector: ContentScriptInjector | null = null;
   private forceDarkMode: ForceDarkMode | null = null;
   private colorblindMode: ColorblindMode | null = null;
@@ -223,7 +229,7 @@ export class TabManager {
     // Destroy the webContents
     const wc = tab.view?.webContents;
     if (wc && !wc.isDestroyed()) {
-      wc.destroy();
+      destroyWebContents(wc);
     }
     this.tabs.delete(tabId);
 
@@ -237,8 +243,9 @@ export class TabManager {
     if (wasActive) {
       this.activeTabId = null;
       const remaining = Array.from(this.tabs.keys());
-      if (remaining.length > 0) {
-        this.switchTab(remaining[remaining.length - 1]);
+      const last = remaining[remaining.length - 1];
+      if (last !== undefined) {
+        this.switchTab(last);
       } else {
         // Last tab closed - create a new blank tab
         await this.createTab({ active: true });
@@ -276,7 +283,7 @@ export class TabManager {
     this.activeTabId = tabId;
     tab.state.isActive = true;
     this.window.addBrowserView(tab.view);
-    tab.view.setBounds(this.viewBounds);
+    tab.view.setBounds(this.effectiveBounds());
 
     this.broadcastTabUpdate();
     this.logger.debug('Switched to tab', { tabId });
@@ -289,6 +296,23 @@ export class TabManager {
   updateBounds(bounds: Electron.Rectangle): void {
     this.viewBounds = bounds;
     this.repositionActiveView();
+  }
+
+  /**
+   * Hide all tab content while the session is locked. Enforced here, in the
+   * main process, so a page can never come back on screen (window focus,
+   * screen unlock, resume, tab switch, a stale renderer) until the vault is
+   * unlocked again.
+   */
+  setContentLocked(locked: boolean): void {
+    if (this.contentLocked === locked) return;
+    this.contentLocked = locked;
+    this.logger.info(locked ? 'Tab content locked' : 'Tab content unlocked');
+    this.repositionActiveView();
+  }
+
+  private effectiveBounds(): Electron.Rectangle {
+    return this.contentLocked ? { x: 0, y: 0, width: 0, height: 0 } : this.viewBounds;
   }
 
   // -- Navigation delegation --
@@ -362,6 +386,7 @@ export class TabManager {
     if (clamped === fromIndex) return false;
 
     const [moved] = entries.splice(fromIndex, 1);
+    if (!moved) return false;
     entries.splice(clamped, 0, moved);
 
     // Rebuild the Map in the new order — Map iteration preserves insertion order,
@@ -479,7 +504,7 @@ export class TabManager {
           this.window.removeBrowserView(tab.view);
         }
         if (tab.view?.webContents && !tab.view.webContents.isDestroyed()) {
-          tab.view.webContents.destroy();
+          destroyWebContents(tab.view.webContents);
         }
       } catch { /* already destroyed */ }
     }
@@ -596,8 +621,8 @@ export class TabManager {
       }
     });
 
-    wc.on('audio-state-changed', (_event, audible: boolean) => {
-      this.updateTabState(tabId, { isAudioPlaying: audible });
+    wc.on('audio-state-changed', (event) => {
+      this.updateTabState(tabId, { isAudioPlaying: event.audible });
     });
 
     wc.on('page-favicon-updated', (_event, favicons) => {
@@ -679,7 +704,7 @@ export class TabManager {
 
     const tab = this.tabs.get(this.activeTabId);
     if (tab) {
-      tab.view.setBounds(this.viewBounds);
+      tab.view.setBounds(this.effectiveBounds());
     }
   }
 }

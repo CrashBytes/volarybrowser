@@ -42,7 +42,7 @@ class ErrorBoundary extends React.Component<
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+  override componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     // Log to console for debugging
     console.error('[Volary] React Error Boundary caught error:', error, errorInfo);
 
@@ -56,7 +56,7 @@ class ErrorBoundary extends React.Component<
     window.location.reload();
   };
 
-  render() {
+  override render() {
     if (this.state.hasError) {
       return (
         <div

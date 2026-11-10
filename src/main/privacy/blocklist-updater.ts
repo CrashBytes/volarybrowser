@@ -132,7 +132,7 @@ export class BlocklistUpdater {
       // Hosts format: "0.0.0.0 domain" or "127.0.0.1 domain"
       const hostsMatch = line.match(/^(?:0\.0\.0\.0|127\.0\.0\.1)\s+(.+)/);
       if (hostsMatch) {
-        const domain = hostsMatch[1].split('#')[0].trim().toLowerCase();
+        const domain = hostsMatch[1]?.split('#')[0]?.trim().toLowerCase();
         if (domain && domain !== 'localhost' && domain !== 'localhost.localdomain' && !domain.startsWith('::')) {
           domains.push(domain);
         }
