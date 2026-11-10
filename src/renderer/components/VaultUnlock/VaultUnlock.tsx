@@ -9,12 +9,15 @@ interface VaultUnlockProps {
   onSuccess: () => void;
   onCancel?: () => void;
   allowSkip?: boolean;
+  /** Session locked after use: cover the whole browser, nothing shows through. */
+  locked?: boolean;
 }
 
 export const VaultUnlock: React.FC<VaultUnlockProps> = ({
   onSuccess,
   onCancel,
   allowSkip = false,
+  locked = false,
 }) => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -60,7 +63,7 @@ export const VaultUnlock: React.FC<VaultUnlockProps> = ({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Escape' && onCancel && !isSubmitting) {
+    if (e.key === 'Escape' && allowSkip && onCancel && !isSubmitting) {
       onCancel();
     }
   };
@@ -74,7 +77,7 @@ export const VaultUnlock: React.FC<VaultUnlockProps> = ({
   };
 
   return (
-    <div className="vault-unlock" onKeyDown={handleKeyDown}>
+    <div className={locked ? 'vault-unlock vault-unlock--locked' : 'vault-unlock'} onKeyDown={handleKeyDown}>
       <div className="vault-modal">
         <div className="vault-header">
           <div className="vault-icon">

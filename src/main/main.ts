@@ -39,6 +39,7 @@ import { PermissionHandler } from './permission-dialog';
 import { CrashRecovery } from './crash-recovery';
 import { AppMenu } from './app-menu';
 import { setMediaVault } from './context-menu';
+import { mediaSniffer } from './media/media-sniffer';
 import { setSearchEngine } from './utils/url-validator';
 import { getSetting } from '../../core/storage/repositories/settings';
 import { ReadingMode } from './reading-mode';
@@ -248,7 +249,7 @@ class VolaryBrowser {
     });
 
     // Render process crash - log and potentially recover
-    app.on('render-process-gone', (event, webContents, details) => {
+    app.on('render-process-gone', (_event, _webContents, details) => {
       this.logger.error('Renderer process crashed', undefined, {
         reason: details.reason,
         exitCode: details.exitCode,
@@ -283,7 +284,7 @@ class VolaryBrowser {
     });
 
     // Child process crash - log for diagnostics
-    app.on('child-process-gone', (event, details) => {
+    app.on('child-process-gone', (_event, details) => {
       this.logger.error('Child process crashed', undefined, {
         type: details.type,
         reason: details.reason,
@@ -390,6 +391,7 @@ class VolaryBrowser {
 
       // Initialize vault manager (encrypted storage)
       await this.vaultManager.initialize();
+      mediaSniffer.install();
       setMediaVault(
         this.vaultManager.getMediaVault(),
         () => this.ipcHandlers.send('vault:request-unlock', null),
@@ -397,7 +399,10 @@ class VolaryBrowser {
       );
       // Auto-lock (inactivity, sleep, screen lock) must reach the UI too, so an
       // open media gallery drops its decrypted previews.
+      // The main process hides tab content itself while a session that was
+      // unlocked is locked again; the renderer's prompt is not the only guard.
       this.vaultManager.onStatusChange((status) => {
+        this.tabManager.setContentLocked(status.requiresUnlock);
         this.ipcHandlers.send('vault:status-changed', status);
       });
       this.logger.debug('Vault manager initialized');
@@ -496,7 +501,7 @@ class VolaryBrowser {
         // await installExtension(REACT_DEVELOPER_TOOLS);
         // this.logger.debug('React DevTools installed');
       } catch (error) {
-        this.logger.warn('Failed to install React DevTools', error as Error);
+        this.logger.warn('Failed to install React DevTools', { error: (error as Error).message });
       }
     }
   }
@@ -526,7 +531,7 @@ class VolaryBrowser {
       if (getSetting<boolean>('clearDataOnExit', true)) {
         try {
           await session.defaultSession.clearStorageData({
-            storages: ['cookies', 'localstorage', 'cachestorage', 'indexdb', 'shadercache', 'websql', 'serviceworkers'],
+            storages: ['cookies', 'localstorage', 'cachestorage', 'indexdb', 'shadercache', 'serviceworkers'],
           });
           await session.defaultSession.clearCache();
           this.logger.info('Browsing data cleared on exit');

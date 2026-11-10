@@ -19,7 +19,8 @@ import { getSetting, setSetting } from '../../../core/storage/repositories/setti
 import { ILogger } from '../types';
 import { LoggerFactory } from '../utils/logger';
 
-export type ColorblindType = 'off' | 'deuteranopia' | 'protanopia' | 'tritanopia';
+export const COLORBLIND_TYPES = ['off', 'deuteranopia', 'protanopia', 'tritanopia'] as const;
+export type ColorblindType = (typeof COLORBLIND_TYPES)[number];
 
 /**
  * CSS + SVG filters that remap problem color ranges to
@@ -157,7 +158,7 @@ export class ColorblindMode {
   cycle(): ColorblindType {
     const order: ColorblindType[] = ['off', 'deuteranopia', 'protanopia', 'tritanopia'];
     const idx = order.indexOf(this.mode);
-    const next = order[(idx + 1) % order.length];
+    const next = order[(idx + 1) % order.length] ?? 'off';
     this.setMode(next);
     return next;
   }

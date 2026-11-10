@@ -42,7 +42,7 @@ export function saveSession(name: string, tabs: Array<{ url: string; title: stri
 /**
  * Get all saved sessions (without tabs)
  */
-export function listSessions(): Array<{ id: number; name: string; createdAt: number; tabCount: number }> {
+export function listSessions(): Array<{ id: number; name: string; created_at: number; tab_count: number }> {
   const db = getDatabase();
   return db.prepare(`
     SELECT s.id, s.name, s.created_at, COUNT(t.id) as tab_count

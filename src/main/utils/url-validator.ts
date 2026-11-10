@@ -39,7 +39,7 @@ export function setSearchEngine(engine: string): void {
 }
 
 function getSearchUrl(): string {
-  return SEARCH_ENGINES[currentSearchEngine] || SEARCH_ENGINES.duckduckgo;
+  return (SEARCH_ENGINES[currentSearchEngine] || SEARCH_ENGINES['duckduckgo']) as string;
 }
 
 /**

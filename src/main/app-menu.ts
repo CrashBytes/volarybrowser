@@ -13,6 +13,7 @@ import { saveSession, listSessions, getSession } from '../../core/storage/reposi
 import { getRecentHistory, deleteAllHistory } from '../../core/storage/repositories/history';
 import { ILogger } from './types';
 import { LoggerFactory } from './utils/logger';
+import { saveAllImagesToVault } from './context-menu';
 
 export interface MenuConfig {
   historyEnabled: boolean;
@@ -74,9 +75,9 @@ export class AppMenu {
           {
             label: 'New Tab',
             accelerator: 'CmdOrCtrl+T',
-            click: () => {
-              this.tabManager.createTab({ active: true });
-              send('focus-address-bar');
+            click: async () => {
+              await this.tabManager.createTab({ active: true });
+              this.tabManager.focusAddressBar();
             },
           },
           {
@@ -115,10 +116,10 @@ export class AppMenu {
                 if (sessions.length === 0) {
                   return [{ label: 'No saved sessions', enabled: false }];
                 }
-                return sessions.slice(0, 10).map((s: Record<string, unknown>) => ({
+                return sessions.slice(0, 10).map((s) => ({
                   label: `${s.name} (${s.tab_count} tabs)`,
                   click: async () => {
-                    const session = getSession(s.id as string);
+                    const session = getSession(s.id);
                     if (session) {
                       for (const tab of session.tabs) {
                         await this.tabManager.createTab({ url: tab.url, active: false });
@@ -271,7 +272,7 @@ export class AppMenu {
             try {
               const recent = getRecentHistory(10);
               if (recent.length === 0) return [{ label: 'No history yet', enabled: false }];
-              return recent.map((entry: Record<string, unknown>) => {
+              return recent.map((entry) => {
                 const domain = (() => { try { return new URL(entry.url as string).hostname; } catch { return entry.url as string; } })();
                 const label = entry.title ? `${(entry.title as string).slice(0, 40)} — ${domain}` : domain;
                 return {
@@ -332,6 +333,14 @@ export class AppMenu {
             ],
           },
           { type: 'separator' },
+          {
+            label: 'Save All Images on Page to Vault',
+            accelerator: 'CmdOrCtrl+Shift+M',
+            click: () => {
+              const tab = this.tabManager.getActiveTab();
+              if (tab) saveAllImagesToVault(tab.view).catch((error) => this.logger.error('Save all images failed', error as Error));
+            },
+          },
           {
             label: 'Saved Media (Vault)',
             click: () => send('open-vault-media'),

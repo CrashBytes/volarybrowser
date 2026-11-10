@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { CloseIcon, PlusIcon, SpeakerIcon, SpeakerMutedIcon } from '../../assets/icons/NavIcons';
+import type { TabState } from '../../store/browser-store';
 import './TabBar.css';
 
 interface TabBarProps {

@@ -14,6 +14,12 @@ import { LoggerFactory } from './utils/logger';
 
 const DEFAULT_SUSPEND_AFTER_MS = 10 * 60_000; // 10 minutes
 
+/** A TabManager tab, plus the URL remembered while it is suspended. */
+type ManagedTab = NonNullable<ReturnType<TabManager['getActiveTab']>>;
+type SuspendableTab = Omit<ManagedTab, 'state'> & {
+  state: ManagedTab['state'] & { _suspendedUrl?: string };
+};
+
 export class TabSuspender {
   private logger: ILogger;
   private tabManager: TabManager;
@@ -71,7 +77,7 @@ export class TabSuspender {
     // Don't suspend if it's somehow the active tab
     if (tab && tab.state.id === tabId) return;
 
-    const managedTab = (this.tabManager as unknown as Record<string, Map<string, unknown>>).tabs?.get(tabId);
+    const managedTab = (this.tabManager as unknown as { tabs?: Map<string, SuspendableTab> }).tabs?.get(tabId);
     if (managedTab && managedTab.view?.webContents && !managedTab.view.webContents.isDestroyed()) {
       const url = managedTab.state.url;
       // Load about:blank to free memory

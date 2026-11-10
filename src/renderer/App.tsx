@@ -26,6 +26,7 @@ import { Settings } from './components/Settings';
 import { AISidebar } from './components/AISidebar';
 import { Toast } from './components/Toast';
 import { useBrowserStore } from './store/browser-store';
+import { vaultGate } from './utils/vault-gate';
 import type { TranslateTabState } from '../shared/translation';
 
 export const App: React.FC = () => {
@@ -68,8 +69,9 @@ export const App: React.FC = () => {
   const activeTab = tabs.find((t) => t.id === activeTabId) || null;
 
   // Whether the BrowserView should be hidden (modal, panel, or new tab page)
-  const vaultModalVisible = !vaultStatus.skipped &&
-    (vaultStatus.isLoading || !vaultStatus.hasVault || !vaultStatus.isUnlocked);
+  const gate = vaultGate(vaultStatus);
+  const vaultModalVisible = gate.visible;
+  const sessionLocked = gate.visible && !gate.dismissible;
   const isModalOpen = vaultModalVisible
     || showBlockedPanel
     || tabContextMenuOpen
@@ -126,13 +128,18 @@ export const App: React.FC = () => {
     loadAccessibilitySettings();
 
     // Subscribe to events
-    const handleVaultChange = (_event: unknown, status: { isUnlocked: boolean; hasVault: boolean }) => {
-      setVaultStatus({ isUnlocked: status.isUnlocked, hasVault: status.hasVault, isLoading: false });
+    const handleVaultChange = (_event: unknown, status: { isUnlocked: boolean; hasVault: boolean; requiresUnlock?: boolean }) => {
+      setVaultStatus({
+        isUnlocked: status.isUnlocked,
+        hasVault: status.hasVault,
+        requiresUnlock: !!status.requiresUnlock,
+        isLoading: false,
+      });
     };
     const handleTabUpdate = (_event: unknown, data: { tabs: typeof tabs; activeTabId: string | null }) => {
       setTabs(data.tabs, data.activeTabId);
     };
-    const handleDownloadUpdate = (_event: unknown, downloads: unknown[]) => {
+    const handleDownloadUpdate = (_event: unknown, downloads: Parameters<typeof setDownloads>[0]) => {
       setDownloads(downloads);
     };
     const handleBlockedCount = (_event: unknown, data: { count: number; urls: string[] }) => {
@@ -230,6 +237,8 @@ export const App: React.FC = () => {
    */
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Locked session: no browser shortcuts until the password is entered.
+      if (sessionLocked) return;
       const mod = e.metaKey || e.ctrlKey;
 
       // Ctrl+Tab / Ctrl+Shift+Tab — cycle tabs (works on all platforms)
@@ -240,7 +249,8 @@ export const App: React.FC = () => {
           const next = e.shiftKey
             ? (idx - 1 + tabs.length) % tabs.length
             : (idx + 1) % tabs.length;
-          window.volary.tabs.switch(tabs[next].id);
+          const nextTab = tabs[next];
+          if (nextTab) window.volary.tabs.switch(nextTab.id);
         }
         return;
       }
@@ -286,7 +296,7 @@ export const App: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [tabs, activeTabId, openFind]);
+  }, [tabs, activeTabId, openFind, sessionLocked]);
 
   // -- Data fetching --
 
@@ -302,7 +312,12 @@ export const App: React.FC = () => {
   const checkVaultStatus = async () => {
     try {
       const status = await window.volary.vault.getStatus();
-      setVaultStatus({ isUnlocked: status.isUnlocked, hasVault: status.hasVault, isLoading: false });
+      setVaultStatus({
+        isUnlocked: status.isUnlocked,
+        hasVault: status.hasVault,
+        requiresUnlock: !!status.requiresUnlock,
+        isLoading: false,
+      });
     } catch (error) {
       console.error('[App] Failed to check vault status:', error);
       setVaultStatus({ isUnlocked: false, hasVault: false, isLoading: false });
@@ -495,7 +510,7 @@ export const App: React.FC = () => {
       />
 
       {/* Vault Modals */}
-      {!vaultStatus.isLoading && !vaultStatus.skipped && (
+      {!vaultStatus.isLoading && gate.visible && (
         <>
           {!vaultStatus.hasVault && (
             <VaultInitialize
@@ -505,9 +520,10 @@ export const App: React.FC = () => {
           )}
           {vaultStatus.hasVault && !vaultStatus.isUnlocked && (
             <VaultUnlock
-              onSuccess={() => setVaultStatus({ isUnlocked: true })}
-              onCancel={() => setVaultStatus({ skipped: true })}
-              allowSkip={true}
+              onSuccess={() => setVaultStatus({ isUnlocked: true, requiresUnlock: false })}
+              onCancel={gate.dismissible ? () => setVaultStatus({ skipped: true }) : undefined}
+              allowSkip={gate.dismissible}
+              locked={!gate.dismissible}
             />
           )}
         </>

@@ -13,6 +13,12 @@
   animation: fadeIn 0.2s ease-out;
 }
 
+/* Locked session: opaque, so tab titles and the address bar do not show through */
+.vault-unlock--locked {
+  background: #0b0d12;
+  backdrop-filter: none;
+}
+
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }

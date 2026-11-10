@@ -12,6 +12,7 @@
  * @module renderer/types/global
  */
 
+/* eslint-disable @typescript-eslint/no-explicit-any -- IPC results are untyped at the bridge */
 import type { TranslateTabState } from '../../shared/translation';
 
 /**
@@ -80,6 +81,68 @@ interface VolaryAPI {
     switch(tabId: string): Promise<TabOperationResult>;
     getAll(): Promise<TabUpdateEvent>;
     updateBounds(bounds: { x: number; y: number; width: number; height: number }): void;
+    togglePin(tabId: string): Promise<{ pinned: boolean }>;
+    toggleMute(tabId: string): Promise<any>;
+    reorder(tabId: string, newIndex: number): Promise<any>;
+  };
+
+  /** Browsing history (only recorded when the saveHistory setting is on) */
+  history: {
+    search(query: string, limit?: number): Promise<any>;
+    getRecent(limit?: number): Promise<any>;
+    delete(id: number): Promise<any>;
+    clear(): Promise<any>;
+  };
+
+  downloads: {
+    getAll(): Promise<any>;
+    pause(id: string): Promise<any>;
+    resume(id: string): Promise<any>;
+    cancel(id: string): Promise<any>;
+  };
+
+  /** Find in page, on the active tab */
+  find: {
+    start(text: string, forward?: boolean): Promise<any>;
+    next(): Promise<any>;
+    previous(): Promise<any>;
+    stop(): Promise<any>;
+  };
+
+  zoom: {
+    in(): Promise<any>;
+    out(): Promise<any>;
+    reset(): Promise<any>;
+    get(): Promise<any>;
+  };
+
+  readingMode: {
+    toggle(): Promise<any>;
+  };
+
+  darkMode: {
+    toggle(): Promise<any>;
+    getStatus(): Promise<any>;
+  };
+
+  sessions: {
+    save(name: string): Promise<any>;
+    list(): Promise<any>;
+    restore(id: number): Promise<any>;
+    delete(id: number): Promise<any>;
+  };
+
+  colorblind: {
+    cycle(): Promise<any>;
+    set(mode: string): Promise<any>;
+    getStatus(): Promise<any>;
+  };
+
+  extensions: {
+    getAll(): Promise<any>;
+    toggle(id: string): Promise<any>;
+    remove(id: string): Promise<any>;
+    load(extensionPath: string): Promise<any>;
   };
 
   /**
@@ -128,7 +191,7 @@ interface VolaryAPI {
    */
   on(
     channel: string,
-    callback: (event: unknown, ...args: unknown[]) => void
+    callback: (event: unknown, ...args: any[]) => void
   ): void;
 
   /**
@@ -138,7 +201,7 @@ interface VolaryAPI {
    */
   off(
     channel: string,
-    callback: (event: unknown, ...args: unknown[]) => void
+    callback: (event: unknown, ...args: any[]) => void
   ): void;
 
   /**
@@ -213,6 +276,7 @@ interface VaultLockResult {
 interface VaultStatus {
   isUnlocked: boolean;
   hasVault: boolean;
+  requiresUnlock?: boolean;
 }
 
 interface NavigationResult {
